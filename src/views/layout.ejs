@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Slocial</title>
     <link rel="stylesheet" href="/static/css/styles.css" />
+    <link rel="icon" href="data:," />
   </head>
-  <body>
+  <body class="<%= (typeof pageClass !== 'undefined') ? pageClass : '' %>">
     <%- include('partials_nav') %>
     <div class="container tagline">
       <q>I didn't have time to write a short letter.</q> <span class="author">— Mark Twain</span>
@@ -14,6 +15,15 @@
     <main class="container">
       <%- body %>
     </main>
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div class="footer-left">© <%= new Date().getFullYear() %> slocial.org</div>
+        <nav class="footer-nav">
+          <a href="/about">About</a>
+          <a href="/principles">Principles</a>
+        </nav>
+      </div>
+    </footer>
   </body>
 </html>
 

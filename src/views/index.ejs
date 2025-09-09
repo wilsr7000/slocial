@@ -1,5 +1,37 @@
- 
+<section class="hero">
+  <h1>Slow letters, lasting resonance</h1>
+  <p>Write once a day. Letters steep for 12 hours. No rush, no noise.</p>
+  <div class="hero-ctas">
+    <% if (user) { %>
+      <a class="btn btn-primary" href="/compose">Compose a letter</a>
+    <% } else { %>
+      <a class="btn btn-primary" href="/signup">Create account</a>
+      <a class="btn btn-ghost" href="/login">Sign in</a>
+    <% } %>
+  </div>
+</section>
+
+<section class="features container">
+  <div class="feature">
+    <h3>12-hour steep</h3>
+    <p>Space to reflect. Letters publish after a gentle pause.</p>
+  </div>
+  <div class="feature">
+    <h3>One a day</h3>
+    <p>Quality over quantity. Intentional writing, not infinite scroll.</p>
+  </div>
+  <div class="feature">
+    <h3>No scores</h3>
+    <p>Resonate quietly. No public counters or popularity contests.</p>
+  </div>
+  <div class="feature">
+    <h3>Thoughtful replies</h3>
+    <p>One response per reader per letter keeps threads calm.</p>
+  </div>
+</section>
+
 <section class="feed">
+  <h2 class="section-title">Latest letters</h2>
   <% if (letters.length === 0) { %>
     <p class="empty">No letters yet. Come back later.</p>
   <% } %>
@@ -11,9 +43,9 @@
       <div class="actions">
         <% if (user) { %>
           <% if (letter.did_resonate) { %>
-            <form action="/letters/<%= letter.id %>/unresonate" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>" /><button>Unresonate</button></form>
+            <form action="/letters/<%= letter.id %>/unresonate" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>" /><button class="btn">Unresonate</button></form>
           <% } else { %>
-            <form action="/letters/<%= letter.id %>/resonate" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>" /><button>Resonate</button></form>
+            <form action="/letters/<%= letter.id %>/resonate" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>" /><button class="btn">Resonate</button></form>
           <% } %>
         <% } %>
       </div>
@@ -22,9 +54,9 @@
 
   <div class="pagination">
     <% if (page > 1) { %>
-      <a href="/?page=<%= page - 1 %>">Previous</a>
+      <a class="btn" href="/?page=<%= page - 1 %>">Previous</a>
     <% } %>
-    <a href="/?page=<%= page + 1 %>">Next</a>
+    <a class="btn" href="/?page=<%= page + 1 %>">Next</a>
   </div>
 </section>
 

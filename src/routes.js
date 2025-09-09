@@ -27,7 +27,14 @@ function buildRouter(db) {
       LIMIT @limit OFFSET @offset
     `).all({ now, limit: pageSize, offset, uid: req.session.user?.id || -1 });
 
-    res.render('index', { user: req.session.user, letters, page });
+    res.render('index', { user: req.session.user, letters, page, pageClass: 'home' });
+  });
+
+  router.get('/about', (req, res) => {
+    res.send('<div class="container"><h1>About</h1><p>Slocial is slow social—letters that steep before they publish.</p></div>');
+  });
+  router.get('/principles', (req, res) => {
+    res.send('<div class="container"><h1>Principles</h1><ul><li>Patience</li><li>Clarity</li><li>Kindness</li></ul></div>');
   });
 
   router.get('/signup', (req, res) => res.render('signup', { user: req.session.user, errors: [], values: {} }));
