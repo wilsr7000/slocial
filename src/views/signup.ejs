@@ -1,0 +1,18 @@
+ 
+<h1>Create account</h1>
+<% if (errors && errors.length) { %>
+  <ul class="errors">
+    <% errors.forEach(e => { %><li><%= e.msg %></li><% }) %>
+  </ul>
+<% } %>
+<form method="post">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+  <label>Handle <input type="text" name="handle" value="<%= values.handle || '' %>" required /></label>
+  <label>Email <input type="email" name="email" value="<%= values.email || '' %>" required /></label>
+  <label>Password <input type="password" name="password" required /></label>
+  <button type="submit">Create account</button>
+  <p>Already have an account? <a href="/login">Sign in</a></p>
+  <p class="hint">Handles are 3–20 letters or numbers.</p>
+</form>
+
+

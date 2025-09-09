@@ -1,0 +1,18 @@
+ 
+<h1>Compose a letter</h1>
+<p>Your letter will publish in 12 hours. You can write one every 24 hours.</p>
+<% if (errors && errors.length) { %>
+  <ul class="errors">
+    <% errors.forEach(e => { %><li><%= e.msg %></li><% }) %>
+  </ul>
+<% } %>
+<form method="post">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+  <label>Title <input type="text" name="title" value="<%= values.title || '' %>" maxlength="120" required /></label>
+  <label>Body <textarea name="body" rows="12" maxlength="5000" required><%= values.body || '' %></textarea></label>
+  <button type="submit">Queue letter</button>
+  <p class="hint">Letters publish after a 12-hour steep. Slow media, not social media.</p>
+  <p class="hint">No edits after publishing. Be thoughtful.</p>
+</form>
+
+

@@ -1,0 +1,18 @@
+<nav class="nav">
+  <div class="nav-left"><a href="/">slocial.org</a></div>
+  <div class="nav-right">
+    <% if (user) { %>
+      <a href="/compose">Compose</a>
+      <form action="/logout" method="post" style="display:inline">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <button type="submit">Sign out</button>
+      </form>
+      <span class="handle">@<%= user.handle %></span>
+    <% } else { %>
+      <a href="/login">Sign in</a>
+      <a href="/signup">Create account</a>
+    <% } %>
+  </div>
+</nav>
+
+

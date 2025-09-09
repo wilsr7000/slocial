@@ -1,0 +1,31 @@
+ 
+<section class="feed">
+  <% if (letters.length === 0) { %>
+    <p class="empty">No letters yet. Come back later.</p>
+  <% } %>
+  <% letters.forEach(letter => { %>
+    <article class="letter">
+      <h2><a href="/letters/<%= letter.id %>"><%= letter.title %></a></h2>
+      <div class="meta">by @<%= letter.handle %> · <%= new Date(letter.publish_at).toLocaleString() %></div>
+      <p><%= letter.body.slice(0, 260) %><% if (letter.body.length > 260) { %>…<% } %></p>
+      <div class="actions">
+        <% if (user) { %>
+          <% if (letter.did_resonate) { %>
+            <form action="/letters/<%= letter.id %>/unresonate" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>" /><button>Unresonate</button></form>
+          <% } else { %>
+            <form action="/letters/<%= letter.id %>/resonate" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>" /><button>Resonate</button></form>
+          <% } %>
+        <% } %>
+      </div>
+    </article>
+  <% }) %>
+
+  <div class="pagination">
+    <% if (page > 1) { %>
+      <a href="/?page=<%= page - 1 %>">Previous</a>
+    <% } %>
+    <a href="/?page=<%= page + 1 %>">Next</a>
+  </div>
+</section>
+
+

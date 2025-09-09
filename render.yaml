@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: slocial
+    env: node
+    plan: starter
+    region: oregon
+    buildCommand: npm ci
+    startCommand: node src/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: SQLITE_FILE
+        value: /var/data/slocial.db
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1

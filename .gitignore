@@ -1,0 +1,7 @@
+node_modules
+.env
+*.log
+src/db/*.db
+src/db/*.sqlite
+src/db/sessions.db
+

@@ -1,0 +1,40 @@
+ 
+<article class="letter-detail">
+  <h1><%= letter.title %></h1>
+  <div class="meta">by @<%= letter.handle %> · drafted <%= new Date(letter.created_at).toLocaleString() %> · publishes <%= new Date(letter.publish_at).toLocaleString() %></div>
+  <div class="body"><pre><%= letter.body %></pre></div>
+  <div class="actions">
+    <% if (user) { %>
+      <% if (letter.did_resonate) { %>
+        <form action="/letters/<%= letter.id %>/unresonate" method="post"><button>Unresonate</button></form>
+      <% } else { %>
+        <form action="/letters/<%= letter.id %>/resonate" method="post"><button>Resonate</button></form>
+      <% } %>
+    <% } %>
+  </div>
+
+  <section class="comments">
+    <h2>Responses</h2>
+    <% if (!comments.length) { %><p class="empty">No responses yet.</p><% } %>
+    <ul>
+      <% comments.forEach(c => { %>
+        <li>
+          <div class="comment-meta">@<%= c.handle %> · <%= new Date(c.created_at).toLocaleString() %></div>
+          <div class="comment-body"><pre><%= c.body %></pre></div>
+        </li>
+      <% }) %>
+    </ul>
+
+    <% if (user) { %>
+      <form action="/letters/<%= letter.id %>/comment" method="post">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <label>Your thoughtful response <textarea name="body" rows="6" maxlength="2000" required></textarea></label>
+        <button type="submit">Respond</button>
+      </form>
+    <% } else { %>
+      <p><a href="/login">Sign in</a> to respond.</p>
+    <% } %>
+  </section>
+</article>
+
+
