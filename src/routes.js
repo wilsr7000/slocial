@@ -166,6 +166,44 @@ function buildRouter(db) {
       total: totalCount
     });
   });
+  
+  // API endpoint for auto-saving drafts
+  router.post('/api/draft', requireAuth, (req, res) => {
+    const { id, title, body } = req.body;
+    const userId = req.session.user.id;
+    const now = dayjs().toISOString();
+    
+    try {
+      let draftId = id;
+      
+      if (draftId) {
+        // Update existing draft
+        const draft = db.prepare('SELECT * FROM letters WHERE id = ? AND author_id = ? AND is_draft = 1')
+          .get(draftId, userId);
+        
+        if (draft) {
+          db.prepare('UPDATE letters SET title = ?, body = ?, last_saved_at = ? WHERE id = ?')
+            .run(title, body, now, draftId);
+        } else {
+          // Draft not found or doesn't belong to user, create new one
+          draftId = null;
+        }
+      }
+      
+      if (!draftId) {
+        // Create new draft
+        const result = db.prepare('INSERT INTO letters (author_id, title, body, is_draft, last_saved_at, created_at, publish_at, is_published) VALUES (?, ?, ?, 1, ?, ?, ?, 0)')
+          .run(userId, title, body, now, now, now, 0);
+        draftId = result.lastInsertRowid;
+      }
+      
+      res.json({ success: true, draftId });
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      res.status(500).json({ success: false, error: 'Failed to save draft' });
+    }
+  });
+  
   router.get('/principles', (req, res) => {
     res.render('principles', { user: req.session.user });
   });
