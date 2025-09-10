@@ -393,10 +393,10 @@ You can use:
     </div>
     
     <div style="margin:16px 0;">
-      <label style="display:block; margin-bottom:8px; font-weight:600;">Option 2: Upload Image <span style="color:#f59e0b; font-size:11px; font-weight:normal;">(SMALL IMAGES ONLY)</span></label>
+      <label style="display:block; margin-bottom:8px; font-weight:600;">Option 2: Upload Image</label>
       <input type="file" id="image-file" accept="image/*" style="width:100%;">
-      <p style="font-size:12px; color:var(--muted); margin:4px 0;">⚠️ Max 100KB - embeds as text, making letter very long</p>
-      <p style="font-size:11px; color:#f59e0b; margin:4px 0;"><strong>Note:</strong> Large images will appear as walls of text. Use URLs for images over 50KB.</p>
+      <p style="font-size:12px; color:var(--muted); margin:4px 0;">Max 2MB - Image will be embedded in your letter</p>
+      <p style="font-size:11px; color:#666; margin:4px 0;">📷 Shows as a clean placeholder while editing</p>
     </div>
     
     <div style="margin:16px 0;">
@@ -433,7 +433,17 @@ You can use:
   
   // Update preview
   function updatePreview() {
-    const markdown = editor.value;
+    let markdown = editor.value;
+    
+    // Replace image placeholders with actual base64 data for preview only
+    for (const [imageId, base64Data] of Object.entries(uploadedImages)) {
+      const placeholderPattern = new RegExp(`\\(📷 ${imageId}\\)`, 'g');
+      markdown = markdown.replace(placeholderPattern, `(${base64Data})`);
+    }
+    
+    // Remove HTML comments from preview
+    markdown = markdown.replace(/<!--[\s\S]*?-->/g, '');
+    
     if (markdown.trim()) {
       const html = marked.parse(markdown);
       // Allow data URLs for embedded images in preview
@@ -445,7 +455,8 @@ You can use:
     } else {
       preview.innerHTML = '<p style="color: var(--muted); text-align: center; margin-top: 100px;">Your formatted letter will appear here...</p>';
     }
-    charCount.textContent = markdown.length;
+    // Show character count of the actual editor content (with placeholders)
+    charCount.textContent = editor.value.length;
   }
   
   // Insert markdown syntax
@@ -546,30 +557,15 @@ You can use:
   document.getElementById('image-file').addEventListener('change', function() {
     const file = this.files[0];
     if (file) {
-      // Much stricter limit for base64 embedded images
-      const maxSize = 100 * 1024; // 100KB
+      // Reasonable limit for embedded images (2MB)
+      const maxSize = 2 * 1024 * 1024; // 2MB
       if (file.size > maxSize) {
-        const sizeKB = Math.round(file.size / 1024);
-        alert(`Image is ${sizeKB}KB - too large for embedding!\n\n` +
-              `For best results:\n` +
-              `• Use images under 100KB for direct upload\n` +
-              `• Or use an image URL instead (recommended)\n` +
-              `• Try image hosting: Imgur, Cloudinary, etc.\n\n` +
-              `Large embedded images make your letter text very long.`);
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+        alert(`Image is ${sizeMB}MB - too large!\n\n` +
+              `Please use images under 2MB or use an image URL for larger files.`);
         this.value = '';
         document.getElementById('image-preview').style.display = 'none';
         return;
-      }
-      
-      // Warn about base64 encoding
-      if (file.size > 50 * 1024) { // Warn if over 50KB
-        const sizeKB = Math.round(file.size / 1024);
-        if (!confirm(`This ${sizeKB}KB image will be embedded as text in your letter.\n\n` +
-                     `This will add ~${Math.round(sizeKB * 1.37)}KB of text to your letter.\n\n` +
-                     `Continue? (Using an image URL is recommended instead)`)) {
-          this.value = '';
-          return;
-        }
       }
       
       const reader = new FileReader();
@@ -582,24 +578,43 @@ You can use:
     }
   });
   
+  // Store uploaded images with placeholders
+  let uploadedImages = {};
+  let imageCounter = 0;
+  
   function insertImageToEditor() {
     const urlInput = document.getElementById('image-url').value;
     const fileInput = document.getElementById('image-file').files[0];
     const altText = document.getElementById('image-alt').value || 'Image';
     
     if (urlInput) {
-      // Insert URL image
+      // Insert URL image - this is fine as-is
       const markdown = `![${altText}](${urlInput})`;
       insertAtCursor(markdown);
       closeImageModal();
     } else if (fileInput) {
-      // Insert base64 image
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const markdown = `![${altText}](${e.target.result})`;
-        insertAtCursor(markdown);
-        closeImageModal();
-      };
+        // For uploaded images, use a placeholder in the editor
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          imageCounter++;
+          const imageId = `uploaded-image-${imageCounter}`;
+          // Create a readable placeholder that shows it's an uploaded image
+          const placeholder = `![${altText}](📷 ${imageId})`;
+          
+          // Store the actual base64 data
+          uploadedImages[imageId] = e.target.result;
+          
+          // Insert the clean placeholder in the editor
+          insertAtCursor(placeholder);
+          
+          // Add a note about the image
+          const imageNote = `\n<!-- Image uploaded: ${fileInput.name} (${Math.round(fileInput.size/1024)}KB) -->\n`;
+          insertAtCursor(imageNote);
+          
+          // Update preview to show the actual image
+          updatePreview();
+          closeImageModal();
+        };
       reader.readAsDataURL(fileInput);
     } else {
       alert('Please provide an image URL or select a file');
@@ -629,5 +644,19 @@ You can use:
     if (e.target === this) {
       closeImageModal();
     }
+  });
+  
+  // Handle form submission - replace placeholders with actual image data
+  document.getElementById('compose-form').addEventListener('submit', function(e) {
+    // Replace all image placeholders with their actual base64 data
+    let content = editor.value;
+    for (const [imageId, base64Data] of Object.entries(uploadedImages)) {
+      const placeholderPattern = new RegExp(`\\(📷 ${imageId}\\)`, 'g');
+      content = content.replace(placeholderPattern, `(${base64Data})`);
+    }
+    // Remove HTML comments before submission
+    content = content.replace(/<!--[\s\S]*?-->/g, '');
+    // Update the textarea with the final content before submission
+    editor.value = content;
   });
 </script>
