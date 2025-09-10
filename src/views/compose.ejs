@@ -423,6 +423,10 @@ You can use:
   const preview = document.getElementById('preview');
   const charCount = document.getElementById('char-count');
   
+  // Store uploaded images with placeholders - MUST be declared before any functions use them
+  let uploadedImages = {};
+  let imageCounter = 0;
+  
   // Configure marked options
   marked.setOptions({
     breaks: true,
@@ -577,10 +581,6 @@ You can use:
       reader.readAsDataURL(file);
     }
   });
-  
-  // Store uploaded images with placeholders
-  let uploadedImages = {};
-  let imageCounter = 0;
   
   function insertImageToEditor() {
     const urlInput = document.getElementById('image-url').value;
