@@ -119,6 +119,30 @@ function buildRouter(db) {
     req.session.destroy(() => res.redirect('/'));
   });
 
+  // Profile routes
+  router.get('/profile', requireAuth, (req, res) => {
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.session.user.id);
+    res.render('profile', { user: req.session.user, profile: user, errors: [] });
+  });
+
+  router.post('/profile', requireAuth,
+    body('bio').isLength({ max: 500 }).withMessage('Bio must be under 500 characters'),
+    body('avatar_url').optional({ checkFalsy: true }).isURL().withMessage('Avatar must be a valid URL'),
+    (req, res) => {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.session.user.id);
+        return res.status(400).render('profile', { user: req.session.user, profile: user, errors: errors.array() });
+      }
+
+      const { bio, avatar_url } = req.body;
+      db.prepare('UPDATE users SET bio = ?, avatar_url = ? WHERE id = ?')
+        .run(bio || null, avatar_url || null, req.session.user.id);
+      
+      res.redirect('/profile?saved=1');
+    }
+  );
+
   router.get('/compose', requireAuth, (req, res) => {
     res.render('compose', { user: req.session.user, errors: [], values: {} });
   });
@@ -146,7 +170,7 @@ function buildRouter(db) {
     const id = Number(req.params.id);
     const uid = req.session.user?.id || -1;
     const letter = db.prepare(`
-      SELECT l.*, u.handle,
+      SELECT l.*, u.handle, u.bio, u.avatar_url,
         (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
         EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate
       FROM letters l JOIN users u ON u.id = l.author_id WHERE l.id = @id
