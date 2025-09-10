@@ -93,6 +93,53 @@ function initializeDatabase() {
     
     CREATE INDEX IF NOT EXISTS idx_reading_status_user ON reading_status(user_id, status);
     CREATE INDEX IF NOT EXISTS idx_reading_status_letter ON reading_status(letter_id);
+    
+    CREATE TABLE IF NOT EXISTS channels (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      slug TEXT NOT NULL UNIQUE,
+      description TEXT,
+      creator_id INTEGER NOT NULL,
+      is_approved INTEGER NOT NULL DEFAULT 0,
+      is_public INTEGER NOT NULL DEFAULT 1,
+      member_count INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      approved_at TEXT,
+      approved_by INTEGER,
+      FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL
+    );
+    
+    CREATE TABLE IF NOT EXISTS channel_members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      channel_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      role TEXT NOT NULL DEFAULT 'member' CHECK(role IN ('member', 'moderator', 'owner')),
+      joined_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(channel_id, user_id)
+    );
+    
+    CREATE TABLE IF NOT EXISTS channel_invites (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      channel_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'accepted', 'rejected', 'cancelled')),
+      message TEXT,
+      requested_at TEXT NOT NULL DEFAULT (datetime('now')),
+      responded_at TEXT,
+      responded_by INTEGER,
+      FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (responded_by) REFERENCES users(id) ON DELETE SET NULL,
+      UNIQUE(channel_id, user_id)
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_channels_approved ON channels(is_approved, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_channel_members_user ON channel_members(user_id);
+    CREATE INDEX IF NOT EXISTS idx_channel_members_channel ON channel_members(channel_id);
+    CREATE INDEX IF NOT EXISTS idx_channel_invites_status ON channel_invites(status, requested_at DESC);
   `);
 
   return db;

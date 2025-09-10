@@ -284,19 +284,39 @@ function buildRouter(db) {
     if (req.session.user) {
       try {
         const now = dayjs().toISOString();
-        // Set status to 'reading' when they start reading
-        db.prepare(`
-          INSERT INTO reading_status (user_id, letter_id, status, started_at, created_at, updated_at)
-          VALUES (?, ?, 'reading', ?, ?, ?)
-          ON CONFLICT(user_id, letter_id) 
-          DO UPDATE SET 
-            status = CASE 
-              WHEN status IN ('skip', 'later') THEN 'reading'
-              ELSE status 
-            END,
-            started_at = COALESCE(started_at, ?),
-            updated_at = ?
-        `).run(uid, id, now, now, now, now, now);
+        
+        // Check current status
+        const currentStatus = db.prepare('SELECT status FROM reading_status WHERE user_id = ? AND letter_id = ?')
+          .get(uid, id);
+        
+        // Set status to 'reading' when they start reading (unless already read)
+        if (!currentStatus || (currentStatus.status !== 'read' && currentStatus.status !== 'reading')) {
+          db.prepare(`
+            INSERT INTO reading_status (user_id, letter_id, status, started_at, created_at, updated_at)
+            VALUES (?, ?, 'reading', ?, ?, ?)
+            ON CONFLICT(user_id, letter_id) 
+            DO UPDATE SET 
+              status = CASE 
+                WHEN status IN ('skip', 'later') THEN 'reading'
+                ELSE status 
+              END,
+              started_at = COALESCE(started_at, ?),
+              updated_at = ?
+          `).run(uid, id, now, now, now, now, now);
+          
+          // Track the reading start event
+          eventTracker.track('letter_read_start', {
+            userId: uid,
+            sessionId: req.sessionID,
+            letterId: id,
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent'),
+            metadata: { 
+              letterTitle: letter.title,
+              previousStatus: currentStatus?.status || 'none'
+            }
+          });
+        }
       } catch (error) {
         console.error('Error updating reading status:', error);
       }

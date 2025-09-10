@@ -83,6 +83,8 @@
   .event-type.new_visitor { background: #d1ecf1; color: #0c5460; }
   .event-type.visitor { background: #e2e3e5; color: #383d41; }
   .event-type.letter_create { background: #d4edda; color: #155724; }
+  .event-type.letter_read_start { background: #dcfce7; color: #166534; }
+  .event-type.reading_status { background: #fed7aa; color: #92400e; }
   .event-type.comment { background: #f5c6cb; color: #721c24; }
   .event-type.resonate { background: #c3e6cb; color: #155724; }
   
@@ -201,6 +203,8 @@
         <option value="logout" <%= selectedType === 'logout' ? 'selected' : '' %>>Logouts</option>
         <option value="signup" <%= selectedType === 'signup' ? 'selected' : '' %>>Signups</option>
         <option value="letter_create" <%= selectedType === 'letter_create' ? 'selected' : '' %>>Letters Created</option>
+        <option value="letter_read_start" <%= selectedType === 'letter_read_start' ? 'selected' : '' %>>Started Reading</option>
+        <option value="reading_status" <%= selectedType === 'reading_status' ? 'selected' : '' %>>Read/Skip/Later</option>
         <option value="comment" <%= selectedType === 'comment' ? 'selected' : '' %>>Comments</option>
         <option value="resonate" <%= selectedType === 'resonate' ? 'selected' : '' %>>Resonates</option>
       </select>
@@ -262,7 +266,23 @@
           <td>
             <% if (event.metadata && Object.keys(event.metadata).length > 0) { %>
               <span class="metadata" title="<%= JSON.stringify(event.metadata) %>">
-                <%= JSON.stringify(event.metadata) %>
+                <% if (event.event_type === 'reading_status' && event.metadata.status) { %>
+                  <% if (event.metadata.status === 'skip') { %>
+                    <span style="color: #64748b;">→ Skipped</span>
+                  <% } else if (event.metadata.status === 'later') { %>
+                    <span style="color: #f59e0b;">🔖 Saved for Later</span>
+                  <% } else if (event.metadata.status === 'read') { %>
+                    <span style="color: #22c55e;">✓ Marked as Read</span>
+                  <% } else if (event.metadata.status === 'reading') { %>
+                    <span style="color: #3b82f6;">📖 Started Reading</span>
+                  <% } else { %>
+                    <%= event.metadata.status %>
+                  <% } %>
+                <% } else if (event.event_type === 'letter_read_start' && event.metadata.letterTitle) { %>
+                  📖 <%= event.metadata.letterTitle.slice(0, 30) %><% if (event.metadata.letterTitle.length > 30) { %>...<% } %>
+                <% } else { %>
+                  <%= JSON.stringify(event.metadata) %>
+                <% } %>
               </span>
             <% } else { %>
               -
