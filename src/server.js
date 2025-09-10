@@ -27,6 +27,17 @@ app.use(session({
 
 const db = initializeDatabase();
 
+// Auto-create default admin on first run
+const { execSync } = require('child_process');
+try {
+  const adminExists = db.prepare('SELECT id FROM users WHERE email = ?').get('robb@onereach.com');
+  if (!adminExists) {
+    execSync('node src/db/setup-admin.js', { stdio: 'inherit' });
+  }
+} catch (e) {
+  // Silent fail if setup-admin has issues
+}
+
 // Inject locals
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
