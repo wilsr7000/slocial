@@ -9,6 +9,7 @@ const { buildRouter } = require('./routes');
 const ejsLayouts = require('express-ejs-layouts');
 const csrf = require('csurf');
 const eventTracker = require('./services/eventTracker');
+const passport = require('./auth/passport-config');
 
 const app = express();
 app.set('view engine', 'ejs');
@@ -25,6 +26,10 @@ app.use(session({
   saveUninitialized: false,
   cookie: { maxAge: 1000 * 60 * 60 * 24 * 30 },
 }));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 const db = initializeDatabase();
 

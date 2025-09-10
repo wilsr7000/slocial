@@ -11,11 +11,14 @@ function initializeDatabase() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       handle TEXT UNIQUE NOT NULL,
       email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
+      password_hash TEXT,
       bio TEXT,
       avatar_url TEXT,
+      oauth_provider TEXT,
+      oauth_id TEXT,
       is_admin INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(oauth_provider, oauth_id)
     );
 
     CREATE TABLE IF NOT EXISTS letters (

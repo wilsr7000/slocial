@@ -6,7 +6,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "migrate": "node src/db/migrate-admin.js && node src/db/migrate-profile.js && node src/db/migrate-events.js",
+    "migrate": "node src/db/migrate-admin.js && node src/db/migrate-profile.js && node src/db/migrate-events.js && node src/db/migrate-oauth.js",
     "setup-admin": "node src/db/setup-admin.js"
   },
   "keywords": [],
@@ -28,8 +28,12 @@
     "express-validator": "^7.2.1",
     "helmet": "^8.1.0",
     "jsdom": "^26.1.0",
+    "jsonwebtoken": "^9.0.2",
     "marked": "^16.2.1",
-    "morgan": "^1.10.1"
+    "morgan": "^1.10.1",
+    "passport": "^0.7.0",
+    "passport-apple": "^2.0.2",
+    "passport-google-oauth20": "^2.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

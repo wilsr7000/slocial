@@ -6,6 +6,7 @@ const { marked } = require('marked');
 const createDOMPurify = require('dompurify');
 const { JSDOM } = require('jsdom');
 const eventTracker = require('./services/eventTracker');
+const passport = require('passport');
 
 const window = new JSDOM('').window;
 const DOMPurify = createDOMPurify(window);
@@ -138,8 +139,66 @@ function buildRouter(db) {
       ipAddress: req.ip,
       userAgent: req.get('user-agent')
     });
-    req.session.destroy(() => res.redirect('/'));
+    req.logout(() => {
+      req.session.destroy(() => res.redirect('/'));
+    });
   });
+
+  // OAuth Routes - Google
+  router.get('/auth/google', 
+    passport.authenticate('google', { scope: ['profile', 'email'] })
+  );
+
+  router.get('/auth/google/callback',
+    passport.authenticate('google', { failureRedirect: '/login' }),
+    (req, res) => {
+      // Set session user data
+      req.session.user = {
+        id: req.user.id,
+        handle: req.user.handle,
+        email: req.user.email,
+        is_admin: req.user.is_admin === 1
+      };
+      
+      eventTracker.track('login', {
+        userId: req.user.id,
+        sessionId: req.sessionID,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        metadata: { provider: 'google', handle: req.user.handle }
+      });
+      
+      res.redirect('/');
+    }
+  );
+
+  // OAuth Routes - Apple
+  router.get('/auth/apple',
+    passport.authenticate('apple')
+  );
+
+  router.post('/auth/apple/callback',
+    passport.authenticate('apple', { failureRedirect: '/login' }),
+    (req, res) => {
+      // Set session user data
+      req.session.user = {
+        id: req.user.id,
+        handle: req.user.handle,
+        email: req.user.email,
+        is_admin: req.user.is_admin === 1
+      };
+      
+      eventTracker.track('login', {
+        userId: req.user.id,
+        sessionId: req.sessionID,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        metadata: { provider: 'apple', handle: req.user.handle }
+      });
+      
+      res.redirect('/');
+    }
+  );
 
   // Profile routes
   router.get('/profile', requireAuth, (req, res) => {
