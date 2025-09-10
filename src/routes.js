@@ -38,6 +38,16 @@ function buildRouter(db) {
   router.get('/about', (req, res) => {
     res.render('about', { user: req.session.user });
   });
+  
+  // Test endpoint to verify deployment
+  router.get('/test-deploy', (req, res) => {
+    res.json({ 
+      message: 'Admin routes deployed', 
+      version: 'v2',
+      hasAdmin: req.session.user?.is_admin || false,
+      user: req.session.user?.email || 'not logged in'
+    });
+  });
   router.get('/principles', (req, res) => {
     res.render('principles', { user: req.session.user });
   });
