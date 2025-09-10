@@ -2,6 +2,7 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const AppleStrategy = require('passport-apple');
 const Database = require('better-sqlite3');
+const jwt = require('jsonwebtoken');
 const path = require('path');
 
 const dbFile = process.env.SQLITE_FILE || path.join(__dirname, '../db/slocial.db');
@@ -109,17 +110,65 @@ if (process.env.APPLE_SERVICE_ID && process.env.APPLE_TEAM_ID && process.env.APP
     
     try {
       console.log('Apple Sign-In callback received');
-      console.log('Decoded ID Token type:', typeof decodedIdToken);
-      console.log('Decoded ID Token:', JSON.stringify(decodedIdToken, null, 2));
+      console.log('Arguments received:', {
+        hasReq: !!req,
+        hasAccessToken: !!accessToken,
+        hasRefreshToken: !!refreshToken,
+        hasDecodedIdToken: !!decodedIdToken,
+        hasProfile: !!profile
+      });
       
-      // passport-apple passes the decoded ID token
-      // Extract the actual values directly
-      const idToken = decodedIdToken;
-      const sub = idToken.sub;
-      const email_value = idToken.email;
+      // Log all properties of decodedIdToken
+      let actualIdToken = decodedIdToken;
       
-      if (!idToken || !sub) {
-        console.error('Apple Sign-In: Invalid ID token or missing sub');
+      if (decodedIdToken) {
+        console.log('Decoded ID Token type:', typeof decodedIdToken);
+        
+        // If it's a string, it might be a JWT that needs decoding
+        if (typeof decodedIdToken === 'string') {
+          console.log('ID Token is a string, attempting to decode JWT...');
+          try {
+            const decoded = jwt.decode(decodedIdToken);
+            console.log('Successfully decoded JWT:', decoded);
+            actualIdToken = decoded;
+          } catch (e) {
+            console.error('Failed to decode JWT:', e);
+          }
+        } else {
+          console.log('Decoded ID Token keys:', Object.keys(decodedIdToken));
+          console.log('Decoded ID Token values:');
+          for (const [key, value] of Object.entries(decodedIdToken)) {
+            console.log(`  ${key}:`, typeof value === 'function' ? '[Function]' : value);
+          }
+        }
+      }
+      
+      // The profile might have the data instead
+      if (profile) {
+        console.log('Profile:', JSON.stringify(profile, null, 2));
+      }
+      
+      // Log request body to see if Apple sends data there
+      if (req.body) {
+        console.log('Request body keys:', Object.keys(req.body));
+        if (req.body.user) {
+          try {
+            const userData = JSON.parse(req.body.user);
+            console.log('Parsed user data from body:', userData);
+          } catch (e) {
+            console.log('Could not parse req.body.user');
+          }
+        }
+      }
+      
+      // Try multiple ways to get the data
+      const idToken = actualIdToken || {};
+      const sub = idToken.sub || profile?.id || (req.body && req.body.user);
+      const email_value = idToken.email || profile?.email || (req.body && req.body.email);
+      
+      if (!sub) {
+        console.error('Apple Sign-In: Could not find Apple ID in any location');
+        console.error('Checked: idToken.sub, profile.id, req.body.user');
         return done(new Error('Invalid Apple ID token'));
       }
       
