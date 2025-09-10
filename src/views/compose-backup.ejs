@@ -1,0 +1,715 @@
+<style>
+  .editor-container {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+    overflow: hidden;
+    margin: 20px 0;
+  }
+  
+  .editor-tabs {
+    display: flex;
+    background: #fafaf8;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .editor-tab {
+    padding: 12px 24px;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--border);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+  
+  .editor-tab:hover {
+    background: white;
+  }
+  
+  .editor-tab.active {
+    background: white;
+    color: var(--fg);
+    font-weight: 600;
+    border-bottom: 2px solid var(--fg);
+    margin-bottom: -1px;
+  }
+  
+  .tab-content {
+    display: none;
+    flex-direction: column;
+    height: 600px;
+  }
+  
+  .tab-content.active {
+    display: flex;
+  }
+  
+  .editor-toolbar {
+    display: flex;
+    gap: 4px;
+    padding: 8px;
+    background: #fafaf8;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  
+  .toolbar-btn {
+    padding: 6px 10px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+  
+  .toolbar-btn:hover {
+    background: var(--fg);
+    color: white;
+  }
+  
+  .toolbar-separator {
+    width: 1px;
+    background: var(--border);
+    margin: 0 4px;
+  }
+  
+  #markdown-editor {
+    flex: 1;
+    padding: 16px;
+    border: none;
+    resize: none;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    background: white;
+  }
+  
+  #markdown-editor:focus {
+    outline: none;
+  }
+  
+  .preview-content {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  
+  /* Markdown preview styles */
+  .preview-content h1 { font-size: 28px; margin: 20px 0 16px 0; }
+  .preview-content h2 { font-size: 24px; margin: 18px 0 14px 0; }
+  .preview-content h3 { font-size: 20px; margin: 16px 0 12px 0; }
+  .preview-content p { margin: 12px 0; line-height: 1.6; }
+  .preview-content ul, .preview-content ol { margin: 12px 0; padding-left: 24px; }
+  .preview-content li { margin: 6px 0; }
+  .preview-content blockquote {
+    border-left: 4px solid var(--border);
+    padding-left: 16px;
+    margin: 16px 0;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .preview-content code {
+    background: #f5f5f5;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+  }
+  .preview-content pre {
+    background: #f5f5f5;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+  .preview-content pre code {
+    background: none;
+    padding: 0;
+  }
+  .preview-content a {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+  .preview-content hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 24px 0;
+  }
+  .preview-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+  .preview-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+  }
+  .preview-content th, .preview-content td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+  }
+  .preview-content th {
+    background: #fafaf8;
+    font-weight: 600;
+  }
+  
+  .char-count {
+    padding: 8px 16px;
+    background: #fafaf8;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  
+  .markdown-guide {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  
+  .markdown-guide h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+  }
+  
+  .markdown-guide h4 {
+    margin-top: 24px;
+    margin-bottom: 12px;
+  }
+  
+  .markdown-guide table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 24px;
+  }
+  
+  .markdown-guide th {
+    text-align: left;
+    padding: 12px;
+    background: #fafaf8;
+    border: 1px solid var(--border);
+    font-weight: 600;
+  }
+  
+  .markdown-guide td {
+    padding: 12px;
+    border: 1px solid var(--border);
+  }
+  
+  .markdown-guide code {
+    background: #f5f5f5;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+  }
+  
+  .markdown-guide ul {
+    margin: 0;
+    padding-left: 24px;
+  }
+  
+  .markdown-guide li {
+    margin: 8px 0;
+  }
+  
+  @media (max-width: 768px) {
+    .editor-tab {
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .tab-content {
+      height: 500px;
+    }
+  }
+</style>
+
+<!-- Slocial Compose Header Image -->
+<div style="margin: -20px -20px 30px -20px; text-align: center; background: linear-gradient(to bottom, #f8f9fa 0%, transparent 100%); padding: 20px 20px 30px 20px;">
+  <img src="/static/images/slocial.png" 
+       alt="Slocial - Slow down and reflect" 
+       style="max-width: 100%; height: auto; max-height: 300px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);"
+       onerror="this.style.display='none'; document.getElementById('image-placeholder').style.display='block';">
+  <div id="image-placeholder" style="display: none; padding: 60px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white;">
+    <h2 style="margin: 0 0 10px 0; font-size: 32px; font-weight: 300;">slocial</h2>
+    <p style="margin: 0; font-size: 16px; opacity: 0.9;">🐌 Take your time. Write something meaningful.</p>
+  </div>
+</div>
+
+<h1>Compose a Letter</h1>
+
+<div style="background: linear-gradient(135deg, #fef3c7 0%, #fef9e7 100%); border: 1px solid #f59e0b; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+  <h3 style="margin: 0 0 12px 0; color: #92400e; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+    <span style="font-size: 24px;">✍️</span> Slow Down, Think Deeply
+  </h3>
+  <p style="margin: 0 0 16px 0; color: #78350f; font-size: 15px; line-height: 1.6;">
+    <strong>Quality over quantity:</strong> We recommend composing <strong>no more than one letter per week</strong>. 
+    Take time to develop your thoughts fully. Your best ideas deserve time to marinate.
+  </p>
+  <div style="display: flex; gap: 20px; flex-wrap: wrap; font-size: 14px; color: #92400e;">
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <span style="font-size: 18px;">📝</span> 
+      <span><strong>Draft</strong> over multiple days</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <span style="font-size: 18px;">🤔</span> 
+      <span><strong>Reflect</strong> before publishing</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <span style="font-size: 18px;">🌱</span> 
+      <span><strong>Let ideas</strong> fully develop</span>
+    </div>
+  </div>
+  <p style="margin: 16px 0 0 0; padding-top: 16px; border-top: 1px solid #fed7aa; color: #92400e; font-size: 13px; font-style: italic;">
+    "I didn't have time to write a short letter, so I wrote a long one instead." — Mark Twain
+  </p>
+</div>
+
+<p class="hint">Write in Markdown. Your letter will publish in 12 hours. You can write one every 24 hours.</p>
+
+<% if (errors && errors.length) { %>
+  <ul class="errors">
+    <% errors.forEach(e => { %><li><%= e.msg %></li><% }) %>
+  </ul>
+<% } %>
+
+<form method="post" id="compose-form">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+  
+  <label>Title</label>
+  <input type="text" name="title" id="title-input" value="<%= values.title || '' %>" maxlength="120" required placeholder="A thoughtful title..." />
+  
+  <div class="editor-container">
+    <div class="editor-tabs">
+      <button type="button" class="editor-tab active" onclick="switchTab('write')">
+        ✍️ Write
+      </button>
+      <button type="button" class="editor-tab" onclick="switchTab('preview')">
+        👁 Preview
+      </button>
+      <button type="button" class="editor-tab" onclick="switchTab('guide')">
+        📖 Markdown Guide
+      </button>
+    </div>
+    
+    <!-- Write Tab -->
+    <div id="write-tab" class="tab-content active">
+      <div class="editor-toolbar">
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('**', '**')">Bold</button>
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('*', '*')">Italic</button>
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('## ', '')">Heading</button>
+        <div class="toolbar-separator"></div>
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('> ', '')">Quote</button>
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('`', '`')">Code</button>
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('[', '](url)')">Link</button>
+        <button type="button" class="toolbar-btn" onclick="insertImage()">📷 Image</button>
+        <div class="toolbar-separator"></div>
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('- ', '')">List</button>
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('1. ', '')">Number</button>
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('---\n', '')">Divider</button>
+      </div>
+      <textarea 
+        name="body" 
+        id="markdown-editor" 
+        maxlength="50000" 
+        required 
+        placeholder="Write your letter here...
+
+You can use:
+- **Bold** and *italic* text
+- # Headers
+- > Quotes
+- `code`
+- [Links](url)
+- Lists and more..."
+      ><%= values.body || '' %></textarea>
+      <div class="char-count">
+        <span id="char-count">0</span> / 50000 characters
+      </div>
+    </div>
+    
+    <!-- Preview Tab -->
+    <div id="preview-tab" class="tab-content">
+      <div class="preview-content" id="preview">
+        <p style="color: var(--muted); text-align: center; margin-top: 100px;">
+          Your formatted letter will appear here...
+        </p>
+      </div>
+    </div>
+    
+    <!-- Guide Tab -->
+    <div id="guide-tab" class="tab-content">
+      <div class="markdown-guide">
+        <h3>Markdown Quick Reference</h3>
+        <table>
+          <tr>
+            <th>You Type</th>
+            <th>You Get</th>
+          </tr>
+          <tr>
+            <td><code>**bold text**</code></td>
+            <td><strong>bold text</strong></td>
+          </tr>
+          <tr>
+            <td><code>*italic text*</code></td>
+            <td><em>italic text</em></td>
+          </tr>
+          <tr>
+            <td><code># Heading 1</code></td>
+            <td><h4>Heading 1</h4></td>
+          </tr>
+          <tr>
+            <td><code>## Heading 2</code></td>
+            <td><h5>Heading 2</h5></td>
+          </tr>
+          <tr>
+            <td><code>[Link text](url)</code></td>
+            <td><a href="#">Link text</a></td>
+          </tr>
+          <tr>
+            <td><code>![Alt text](image-url)</code></td>
+            <td>🖼️ Image</td>
+          </tr>
+          <tr>
+            <td><code>> Quote</code></td>
+            <td><blockquote style="margin:0;padding-left:10px;border-left:3px solid #ccc;">Quote</blockquote></td>
+          </tr>
+          <tr>
+            <td><code>`inline code`</code></td>
+            <td><code style="background:#f5f5f5;padding:2px 4px;">inline code</code></td>
+          </tr>
+          <tr>
+            <td><code>- List item</code></td>
+            <td>• List item</td>
+          </tr>
+          <tr>
+            <td><code>1. Numbered item</code></td>
+            <td>1. Numbered item</td>
+          </tr>
+          <tr>
+            <td><code>---</code></td>
+            <td><hr style="margin:5px 0;"></td>
+          </tr>
+        </table>
+        
+        <h4>Tips:</h4>
+        <ul>
+          <li>Use <strong>Ctrl/Cmd + B</strong> for bold</li>
+          <li>Use <strong>Ctrl/Cmd + I</strong> for italic</li>
+          <li>Use <strong>Ctrl/Cmd + K</strong> for links</li>
+          <li>Click the image button to add images</li>
+          <li>Preview your letter before publishing</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  
+  <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 20px;">
+    <button type="submit" name="action" value="publish" class="btn btn-primary" style="font-size: 16px; padding: 12px 24px; background: var(--fg); color: white; border: none;">
+      📮 Queue for Publishing
+    </button>
+    <button type="submit" name="action" value="draft" class="btn" style="font-size: 16px; padding: 12px 24px; background: #f3f4f6; color: var(--fg); border: 1px solid var(--border);">
+      💾 Save as Draft
+    </button>
+    <% if (typeof draft !== 'undefined' && draft) { %>
+      <span style="color: #22c55e; font-size: 14px; margin-left: auto;">
+        ✓ Draft saved <%= draft.last_saved_at ? new Date(draft.last_saved_at).toLocaleTimeString() : '' %>
+      </span>
+    <% } %>
+  </div>
+  
+  <p class="hint" style="margin-top: 16px;">
+    <strong>💾 Drafts:</strong> Save your work and come back to it. Perfect for thoughtful writing over multiple days.
+  </p>
+  <p class="hint">💡 Letters publish after a 12-hour steep. This gives you time to reflect, but not to obsess.</p>
+  <p class="hint">📝 Markdown tips: Use **bold** for emphasis, > for quotes, and --- for dividers.</p>
+</form>
+
+<!-- Image Upload Modal -->
+<div id="image-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:white; border-radius:12px; padding:24px; max-width:500px; width:90%; max-height:80vh; overflow-y:auto;">
+    <h3 style="margin-top:0;">Add Image</h3>
+    
+    <div style="margin:16px 0;">
+      <label style="display:block; margin-bottom:8px; font-weight:600;">Option 1: Image URL <span style="color:#22c55e; font-size:11px; font-weight:normal;">(RECOMMENDED)</span></label>
+      <input type="url" id="image-url" placeholder="https://example.com/image.jpg" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px;">
+      <p style="font-size:12px; color:var(--muted); margin:4px 0;">Best option - links to external image, no size limit</p>
+    </div>
+    
+    <div style="margin:16px 0;">
+      <div style="text-align:center; color:var(--muted); margin:16px 0;">— OR —</div>
+    </div>
+    
+    <div style="margin:16px 0;">
+      <label style="display:block; margin-bottom:8px; font-weight:600;">Option 2: Upload Image</label>
+      <input type="file" id="image-file" accept="image/*" style="width:100%;">
+      <p style="font-size:12px; color:var(--muted); margin:4px 0;">Max 2MB - Image will be embedded in your letter</p>
+      <p style="font-size:11px; color:#666; margin:4px 0;">📷 Shows as a clean placeholder while editing</p>
+    </div>
+    
+    <div style="margin:16px 0;">
+      <label style="display:block; margin-bottom:8px;">Alt Text (optional)</label>
+      <input type="text" id="image-alt" placeholder="Description of the image" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px;">
+    </div>
+    
+    <div id="image-preview" style="margin:16px 0; display:none;">
+      <label style="display:block; margin-bottom:8px;">Preview:</label>
+      <img id="preview-img" style="max-width:100%; border-radius:8px; border:1px solid var(--border);">
+    </div>
+    
+    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:20px;">
+      <button type="button" onclick="closeImageModal()" style="padding:8px 16px; border:1px solid var(--border); border-radius:6px; background:white;">Cancel</button>
+      <button type="button" onclick="insertImageToEditor()" style="padding:8px 16px; border:1px solid var(--border); border-radius:6px; background:var(--fg); color:white;">Insert Image</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+<script>
+  const editor = document.getElementById('markdown-editor');
+  const preview = document.getElementById('preview');
+  const charCount = document.getElementById('char-count');
+  
+  // Store uploaded images with placeholders - MUST be declared before any functions use them
+  let uploadedImages = {};
+  let imageCounter = 0;
+  
+  // Configure marked options
+  marked.setOptions({
+    breaks: true,
+    gfm: true,
+    headerIds: false,
+    mangle: false
+  });
+  
+  // Update preview
+  function updatePreview() {
+    let markdown = editor.value;
+    
+    // Replace image placeholders with actual base64 data for preview only
+    for (const [imageId, base64Data] of Object.entries(uploadedImages)) {
+      const placeholderPattern = new RegExp(`\\(📷 ${imageId}\\)`, 'g');
+      markdown = markdown.replace(placeholderPattern, `(${base64Data})`);
+    }
+    
+    // Remove HTML comments from preview
+    markdown = markdown.replace(/<!--[\s\S]*?-->/g, '');
+    
+    if (markdown.trim()) {
+      const html = marked.parse(markdown);
+      // Allow data URLs for embedded images in preview
+      const clean = DOMPurify.sanitize(html, {
+        ADD_DATA_URI_TAGS: ['img'],
+        ADD_ATTR: ['target']
+      });
+      preview.innerHTML = clean;
+    } else {
+      preview.innerHTML = '<p style="color: var(--muted); text-align: center; margin-top: 100px;">Your formatted letter will appear here...</p>';
+    }
+    // Show character count of the actual editor content (with placeholders)
+    charCount.textContent = editor.value.length;
+  }
+  
+  // Insert markdown syntax
+  function insertMarkdown(before, after) {
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const text = editor.value;
+    const selected = text.substring(start, end);
+    
+    const replacement = before + (selected || 'text') + after;
+    editor.value = text.substring(0, start) + replacement + text.substring(end);
+    
+    // Set cursor position
+    const cursorPos = start + before.length + (selected ? selected.length : 4);
+    editor.focus();
+    editor.setSelectionRange(cursorPos, cursorPos);
+    
+    updatePreview();
+  }
+  
+  // Update preview on input
+  editor.addEventListener('input', updatePreview);
+  
+  // Initial preview
+  updatePreview();
+  
+  // Tab switching
+  function switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.editor-tab').forEach(tab => {
+      tab.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => {
+      content.classList.remove('active');
+    });
+    document.getElementById(tabName + '-tab').classList.add('active');
+    
+    // Update preview when switching to preview tab
+    if (tabName === 'preview') {
+      updatePreview();
+    }
+    
+    // Focus editor when switching to write tab
+    if (tabName === 'write') {
+      editor.focus();
+    }
+  }
+  
+  // Keyboard shortcuts
+  editor.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch(e.key) {
+        case 'b':
+          e.preventDefault();
+          insertMarkdown('**', '**');
+          break;
+        case 'i':
+          e.preventDefault();
+          insertMarkdown('*', '*');
+          break;
+        case 'k':
+          e.preventDefault();
+          insertMarkdown('[', '](url)');
+          break;
+      }
+    }
+  });
+  
+  // Image handling
+  function insertImage() {
+    document.getElementById('image-modal').style.display = 'flex';
+    document.getElementById('image-url').value = '';
+    document.getElementById('image-alt').value = '';
+    document.getElementById('image-file').value = '';
+    document.getElementById('image-preview').style.display = 'none';
+  }
+  
+  function closeImageModal() {
+    document.getElementById('image-modal').style.display = 'none';
+  }
+  
+  // Preview image from URL
+  document.getElementById('image-url').addEventListener('input', function() {
+    const url = this.value;
+    if (url) {
+      document.getElementById('preview-img').src = url;
+      document.getElementById('image-preview').style.display = 'block';
+      document.getElementById('image-file').value = ''; // Clear file input
+    } else {
+      document.getElementById('image-preview').style.display = 'none';
+    }
+  });
+  
+  // Preview image from file upload
+  document.getElementById('image-file').addEventListener('change', function() {
+    const file = this.files[0];
+    if (file) {
+      // Reasonable limit for embedded images (2MB)
+      const maxSize = 2 * 1024 * 1024; // 2MB
+      if (file.size > maxSize) {
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+        alert(`Image is ${sizeMB}MB - too large!\n\n` +
+              `Please use images under 2MB or use an image URL for larger files.`);
+        this.value = '';
+        document.getElementById('image-preview').style.display = 'none';
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('preview-img').src = e.target.result;
+        document.getElementById('image-preview').style.display = 'block';
+        document.getElementById('image-url').value = ''; // Clear URL input
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+  
+  function insertImageToEditor() {
+    const urlInput = document.getElementById('image-url').value;
+    const fileInput = document.getElementById('image-file').files[0];
+    const altText = document.getElementById('image-alt').value || 'Image';
+    
+    if (urlInput) {
+      // Insert URL image - this is fine as-is
+      const markdown = `![${altText}](${urlInput})`;
+      insertAtCursor(markdown);
+      closeImageModal();
+    } else if (fileInput) {
+        // For uploaded images, use a placeholder in the editor
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          imageCounter++;
+          const imageId = `uploaded-image-${imageCounter}`;
+          // Create a readable placeholder that shows it's an uploaded image
+          const placeholder = `![${altText}](📷 ${imageId})`;
+          
+          // Store the actual base64 data
+          uploadedImages[imageId] = e.target.result;
+          
+          // Insert the clean placeholder in the editor
+          insertAtCursor(placeholder);
+          
+          // Add a note about the image
+          const imageNote = `\n<!-- Image uploaded: ${fileInput.name} (${Math.round(fileInput.size/1024)}KB) -->\n`;
+          insertAtCursor(imageNote);
+          
+          // Update preview to show the actual image
+          updatePreview();
+          closeImageModal();
+        };
+      reader.readAsDataURL(fileInput);
+    } else {
+      alert('Please provide an image URL or select a file');
+    }
+  }
+  
+  function insertAtCursor(text) {
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const value = editor.value;
+    
+    editor.value = value.substring(0, start) + text + value.substring(end);
+    editor.focus();
+    editor.setSelectionRange(start + text.length, start + text.length);
+    updatePreview();
+  }
+  
+  // Close modal on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeImageModal();
+    }
+  });
+  
+  // Close modal on background click
+  document.getElementById('image-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      closeImageModal();
+    }
+  });
+  
+  // Handle form submission - replace placeholders with actual image data
+  document.getElementById('compose-form').addEventListener('submit', function(e) {
+    // Replace all image placeholders with their actual base64 data
+    let content = editor.value;
+    for (const [imageId, base64Data] of Object.entries(uploadedImages)) {
+      const placeholderPattern = new RegExp(`\\(📷 ${imageId}\\)`, 'g');
+      content = content.replace(placeholderPattern, `(${base64Data})`);
+    }
+    // Remove HTML comments before submission
+    content = content.replace(/<!--[\s\S]*?-->/g, '');
+    // Update the textarea with the final content before submission
+    editor.value = content;
+  });
+</script>

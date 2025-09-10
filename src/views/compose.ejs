@@ -1,715 +1,659 @@
 <style>
-  .editor-container {
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: var(--card);
-    overflow: hidden;
-    margin: 20px 0;
+  /* Ultra-minimal writing surface */
+  * {
+    box-sizing: border-box;
   }
   
-  .editor-tabs {
-    display: flex;
-    background: #fafaf8;
-    border-bottom: 1px solid var(--border);
+  body.writing-surface {
+    background: #fafafa;
+    margin: 0;
+    padding: 0;
   }
   
-  .editor-tab {
-    padding: 12px 24px;
-    background: transparent;
+  .writing-container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 60px 20px;
+    min-height: 100vh;
+  }
+  
+  /* Subtle header */
+  .writing-header {
+    margin-bottom: 60px;
+    opacity: 0;
+    animation: fadeIn 1s ease forwards;
+    animation-delay: 0.2s;
+  }
+  
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+  
+  .surface-title {
+    font-size: 14px;
+    font-weight: 400;
+    color: #999;
+    letter-spacing: 0.5px;
+    margin: 0;
+  }
+  
+  /* Title input - borderless */
+  .letter-title {
+    width: 100%;
+    padding: 0;
+    margin: 0 0 40px 0;
+    font-size: 32px;
+    font-weight: 300;
+    line-height: 1.3;
     border: none;
-    border-right: 1px solid var(--border);
+    background: transparent;
+    color: #333;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    outline: none;
+    resize: none;
+    overflow: hidden;
+  }
+  
+  .letter-title::placeholder {
+    color: #ddd;
+  }
+  
+  /* Writing area - completely clean */
+  .letter-body {
+    width: 100%;
+    min-height: 60vh;
+    padding: 0;
+    margin: 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 19px;
+    line-height: 1.7;
+    color: #333;
+    border: none;
+    background: transparent;
+    outline: none;
+    resize: none;
+  }
+  
+  .letter-body::placeholder {
+    color: #ccc;
+    font-style: italic;
+  }
+  
+  /* Floating tools - hidden by default */
+  .writing-tools {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .writing-container:hover .writing-tools,
+  .writing-tools:hover,
+  .writing-tools.active {
+    opacity: 1;
+  }
+  
+  /* Minimal tool button */
+  .tool-trigger {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: white;
+    border: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--muted);
-    transition: all 0.2s;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   }
   
-  .editor-tab:hover {
+  .tool-trigger:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  }
+  
+  /* Formatting palette - hidden until triggered */
+  .format-palette {
+    position: fixed;
+    bottom: 90px;
+    right: 30px;
     background: white;
-  }
-  
-  .editor-tab.active {
-    background: white;
-    color: var(--fg);
-    font-weight: 600;
-    border-bottom: 2px solid var(--fg);
-    margin-bottom: -1px;
-  }
-  
-  .tab-content {
-    display: none;
-    flex-direction: column;
-    height: 600px;
-  }
-  
-  .tab-content.active {
-    display: flex;
-  }
-  
-  .editor-toolbar {
-    display: flex;
-    gap: 4px;
+    border-radius: 12px;
     padding: 8px;
-    background: #fafaf8;
-    border-bottom: 1px solid var(--border);
-    flex-wrap: wrap;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    display: none;
+    flex-direction: row;
+    gap: 4px;
+    align-items: center;
   }
   
-  .toolbar-btn {
-    padding: 6px 10px;
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 6px;
+  .format-palette.active {
+    display: flex;
+    animation: slideUp 0.2s ease;
+  }
+  
+  @keyframes slideUp {
+    from { 
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .format-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 14px;
-    transition: all 0.2s;
+    color: #666;
+    transition: all 0.15s ease;
   }
   
-  .toolbar-btn:hover {
-    background: var(--fg);
-    color: white;
+  .format-btn:hover {
+    background: #f5f5f5;
+    color: #333;
   }
   
-  .toolbar-separator {
+  .format-divider {
     width: 1px;
-    background: var(--border);
+    height: 20px;
+    background: #e0e0e0;
     margin: 0 4px;
   }
   
-  #markdown-editor {
-    flex: 1;
-    padding: 16px;
-    border: none;
-    resize: none;
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
-    line-height: 1.6;
-    background: white;
+  /* Action buttons - minimal and fixed */
+  .writing-actions {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
   
-  #markdown-editor:focus {
-    outline: none;
+  .writing-container:hover .writing-actions,
+  .writing-actions:hover {
+    opacity: 1;
+  }
+  
+  .action-btn {
+    padding: 10px 20px;
+    border-radius: 20px;
+    border: 1px solid #e0e0e0;
+    background: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+  
+  .action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  
+  .action-btn.primary {
+    background: #333;
+    color: white;
+    border-color: #333;
+  }
+  
+  /* Word count - super subtle */
+  .word-count {
+    position: fixed;
+    top: 30px;
+    right: 30px;
+    font-size: 12px;
+    color: #ccc;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .writing-container:hover .word-count {
+    opacity: 1;
+  }
+  
+  /* Preview mode */
+  .preview-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: white;
+    z-index: 1000;
+    display: none;
+    overflow-y: auto;
+  }
+  
+  .preview-overlay.active {
+    display: block;
   }
   
   .preview-content {
-    flex: 1;
-    padding: 16px;
-    overflow-y: auto;
-    font-family: system-ui, -apple-system, sans-serif;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 60px 20px;
+    font-family: Georgia, serif;
+    font-size: 19px;
+    line-height: 1.7;
+    color: #333;
   }
   
-  /* Markdown preview styles */
-  .preview-content h1 { font-size: 28px; margin: 20px 0 16px 0; }
-  .preview-content h2 { font-size: 24px; margin: 18px 0 14px 0; }
-  .preview-content h3 { font-size: 20px; margin: 16px 0 12px 0; }
-  .preview-content p { margin: 12px 0; line-height: 1.6; }
-  .preview-content ul, .preview-content ol { margin: 12px 0; padding-left: 24px; }
-  .preview-content li { margin: 6px 0; }
-  .preview-content blockquote {
-    border-left: 4px solid var(--border);
-    padding-left: 16px;
-    margin: 16px 0;
-    color: var(--muted);
-    font-style: italic;
-  }
-  .preview-content code {
-    background: #f5f5f5;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
-  }
-  .preview-content pre {
-    background: #f5f5f5;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-  }
-  .preview-content pre code {
-    background: none;
-    padding: 0;
-  }
-  .preview-content a {
-    color: var(--accent);
-    text-decoration: underline;
-  }
-  .preview-content hr {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 24px 0;
-  }
-  .preview-content img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 8px;
-  }
-  .preview-content table {
-    border-collapse: collapse;
-    width: 100%;
-    margin: 16px 0;
-  }
-  .preview-content th, .preview-content td {
-    border: 1px solid var(--border);
-    padding: 8px 12px;
-    text-align: left;
-  }
-  .preview-content th {
-    background: #fafaf8;
-    font-weight: 600;
+  .preview-close {
+    position: fixed;
+    top: 30px;
+    right: 30px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: white;
+    border: 1px solid #e0e0e0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
   }
   
-  .char-count {
+  .preview-close:hover {
+    transform: rotate(90deg);
+  }
+  
+  /* Focus indicator */
+  .focus-indicator {
+    position: fixed;
+    top: 30px;
+    left: 30px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4CAF50;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .writing-container.focused .focus-indicator {
+    opacity: 1;
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+  }
+  
+  /* Saved indicator */
+  .saved-indicator {
+    position: fixed;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
     padding: 8px 16px;
-    background: #fafaf8;
-    border-top: 1px solid var(--border);
+    background: white;
+    border: 1px solid #4CAF50;
+    border-radius: 20px;
     font-size: 13px;
-    color: var(--muted);
+    color: #4CAF50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
   }
   
-  .markdown-guide {
-    padding: 24px;
-    overflow-y: auto;
-    flex: 1;
+  .saved-indicator.show {
+    opacity: 1;
   }
   
-  .markdown-guide h3 {
-    margin-top: 0;
-    margin-bottom: 20px;
-  }
-  
-  .markdown-guide h4 {
-    margin-top: 24px;
-    margin-bottom: 12px;
-  }
-  
-  .markdown-guide table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 24px;
-  }
-  
-  .markdown-guide th {
-    text-align: left;
-    padding: 12px;
-    background: #fafaf8;
-    border: 1px solid var(--border);
-    font-weight: 600;
-  }
-  
-  .markdown-guide td {
-    padding: 12px;
-    border: 1px solid var(--border);
-  }
-  
-  .markdown-guide code {
-    background: #f5f5f5;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: 'Courier New', monospace;
-  }
-  
-  .markdown-guide ul {
-    margin: 0;
-    padding-left: 24px;
-  }
-  
-  .markdown-guide li {
-    margin: 8px 0;
-  }
-  
+  /* Mobile adjustments */
   @media (max-width: 768px) {
-    .editor-tab {
-      padding: 10px 12px;
-      font-size: 13px;
+    .writing-container {
+      padding: 40px 20px;
     }
-    .tab-content {
-      height: 500px;
+    
+    .letter-title {
+      font-size: 24px;
     }
+    
+    .letter-body {
+      font-size: 17px;
+    }
+    
+    .writing-tools {
+      bottom: 20px;
+      right: 20px;
+    }
+    
+    .writing-actions {
+      bottom: 20px;
+    }
+  }
+  
+  /* Remove all borders on focus */
+  *:focus {
+    outline: none;
+  }
+  
+  /* Hide everything except writing when typing */
+  .writing-container.typing .writing-header {
+    opacity: 0.1;
+  }
+  
+  .writing-container.typing .writing-tools,
+  .writing-container.typing .writing-actions,
+  .writing-container.typing .word-count {
+    opacity: 0;
   }
 </style>
 
-<!-- Slocial Compose Header Image -->
-<div style="margin: -20px -20px 30px -20px; text-align: center; background: linear-gradient(to bottom, #f8f9fa 0%, transparent 100%); padding: 20px 20px 30px 20px;">
-  <img src="/static/images/slocial.png" 
-       alt="Slocial - Slow down and reflect" 
-       style="max-width: 100%; height: auto; max-height: 300px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);"
-       onerror="this.style.display='none'; document.getElementById('image-placeholder').style.display='block';">
-  <div id="image-placeholder" style="display: none; padding: 60px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white;">
-    <h2 style="margin: 0 0 10px 0; font-size: 32px; font-weight: 300;">slocial</h2>
-    <p style="margin: 0; font-size: 16px; opacity: 0.9;">🐌 Take your time. Write something meaningful.</p>
-  </div>
-</div>
-
-<h1>Compose a Letter</h1>
-
-<div style="background: linear-gradient(135deg, #fef3c7 0%, #fef9e7 100%); border: 1px solid #f59e0b; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-  <h3 style="margin: 0 0 12px 0; color: #92400e; font-size: 18px; display: flex; align-items: center; gap: 8px;">
-    <span style="font-size: 24px;">✍️</span> Slow Down, Think Deeply
-  </h3>
-  <p style="margin: 0 0 16px 0; color: #78350f; font-size: 15px; line-height: 1.6;">
-    <strong>Quality over quantity:</strong> We recommend composing <strong>no more than one letter per week</strong>. 
-    Take time to develop your thoughts fully. Your best ideas deserve time to marinate.
-  </p>
-  <div style="display: flex; gap: 20px; flex-wrap: wrap; font-size: 14px; color: #92400e;">
-    <div style="display: flex; align-items: center; gap: 6px;">
-      <span style="font-size: 18px;">📝</span> 
-      <span><strong>Draft</strong> over multiple days</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 6px;">
-      <span style="font-size: 18px;">🤔</span> 
-      <span><strong>Reflect</strong> before publishing</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 6px;">
-      <span style="font-size: 18px;">🌱</span> 
-      <span><strong>Let ideas</strong> fully develop</span>
-    </div>
-  </div>
-  <p style="margin: 16px 0 0 0; padding-top: 16px; border-top: 1px solid #fed7aa; color: #92400e; font-size: 13px; font-style: italic;">
-    "I didn't have time to write a short letter, so I wrote a long one instead." — Mark Twain
-  </p>
-</div>
-
-<p class="hint">Write in Markdown. Your letter will publish in 12 hours. You can write one every 24 hours.</p>
-
-<% if (errors && errors.length) { %>
-  <ul class="errors">
-    <% errors.forEach(e => { %><li><%= e.msg %></li><% }) %>
-  </ul>
-<% } %>
-
-<form method="post" id="compose-form">
-  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+<body class="writing-surface">
+  <div class="focus-indicator"></div>
+  <div class="saved-indicator" id="saved-indicator">Draft saved</div>
   
-  <label>Title</label>
-  <input type="text" name="title" id="title-input" value="<%= values.title || '' %>" maxlength="120" required placeholder="A thoughtful title..." />
-  
-  <div class="editor-container">
-    <div class="editor-tabs">
-      <button type="button" class="editor-tab active" onclick="switchTab('write')">
-        ✍️ Write
-      </button>
-      <button type="button" class="editor-tab" onclick="switchTab('preview')">
-        👁 Preview
-      </button>
-      <button type="button" class="editor-tab" onclick="switchTab('guide')">
-        📖 Markdown Guide
-      </button>
+  <div class="writing-container" id="writing-container">
+    <div class="writing-header">
+      <p class="surface-title">WRITING SURFACE</p>
     </div>
     
-    <!-- Write Tab -->
-    <div id="write-tab" class="tab-content active">
-      <div class="editor-toolbar">
-        <button type="button" class="toolbar-btn" onclick="insertMarkdown('**', '**')">Bold</button>
-        <button type="button" class="toolbar-btn" onclick="insertMarkdown('*', '*')">Italic</button>
-        <button type="button" class="toolbar-btn" onclick="insertMarkdown('## ', '')">Heading</button>
-        <div class="toolbar-separator"></div>
-        <button type="button" class="toolbar-btn" onclick="insertMarkdown('> ', '')">Quote</button>
-        <button type="button" class="toolbar-btn" onclick="insertMarkdown('`', '`')">Code</button>
-        <button type="button" class="toolbar-btn" onclick="insertMarkdown('[', '](url)')">Link</button>
-        <button type="button" class="toolbar-btn" onclick="insertImage()">📷 Image</button>
-        <div class="toolbar-separator"></div>
-        <button type="button" class="toolbar-btn" onclick="insertMarkdown('- ', '')">List</button>
-        <button type="button" class="toolbar-btn" onclick="insertMarkdown('1. ', '')">Number</button>
-        <button type="button" class="toolbar-btn" onclick="insertMarkdown('---\n', '')">Divider</button>
-      </div>
+    <form method="post" id="compose-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      
       <textarea 
-        name="body" 
-        id="markdown-editor" 
-        maxlength="50000" 
-        required 
-        placeholder="Write your letter here...
-
-You can use:
-- **Bold** and *italic* text
-- # Headers
-- > Quotes
-- `code`
-- [Links](url)
-- Lists and more..."
+        name="title"
+        class="letter-title" 
+        placeholder="Title"
+        maxlength="120"
+        required
+        rows="1"
+        id="title-input"
+      ><%= values.title || '' %></textarea>
+      
+      <textarea 
+        name="body"
+        class="letter-body"
+        placeholder="Begin writing..."
+        maxlength="50000"
+        required
+        id="body-input"
       ><%= values.body || '' %></textarea>
-      <div class="char-count">
-        <span id="char-count">0</span> / 50000 characters
-      </div>
-    </div>
-    
-    <!-- Preview Tab -->
-    <div id="preview-tab" class="tab-content">
-      <div class="preview-content" id="preview">
-        <p style="color: var(--muted); text-align: center; margin-top: 100px;">
-          Your formatted letter will appear here...
-        </p>
-      </div>
-    </div>
-    
-    <!-- Guide Tab -->
-    <div id="guide-tab" class="tab-content">
-      <div class="markdown-guide">
-        <h3>Markdown Quick Reference</h3>
-        <table>
-          <tr>
-            <th>You Type</th>
-            <th>You Get</th>
-          </tr>
-          <tr>
-            <td><code>**bold text**</code></td>
-            <td><strong>bold text</strong></td>
-          </tr>
-          <tr>
-            <td><code>*italic text*</code></td>
-            <td><em>italic text</em></td>
-          </tr>
-          <tr>
-            <td><code># Heading 1</code></td>
-            <td><h4>Heading 1</h4></td>
-          </tr>
-          <tr>
-            <td><code>## Heading 2</code></td>
-            <td><h5>Heading 2</h5></td>
-          </tr>
-          <tr>
-            <td><code>[Link text](url)</code></td>
-            <td><a href="#">Link text</a></td>
-          </tr>
-          <tr>
-            <td><code>![Alt text](image-url)</code></td>
-            <td>🖼️ Image</td>
-          </tr>
-          <tr>
-            <td><code>> Quote</code></td>
-            <td><blockquote style="margin:0;padding-left:10px;border-left:3px solid #ccc;">Quote</blockquote></td>
-          </tr>
-          <tr>
-            <td><code>`inline code`</code></td>
-            <td><code style="background:#f5f5f5;padding:2px 4px;">inline code</code></td>
-          </tr>
-          <tr>
-            <td><code>- List item</code></td>
-            <td>• List item</td>
-          </tr>
-          <tr>
-            <td><code>1. Numbered item</code></td>
-            <td>1. Numbered item</td>
-          </tr>
-          <tr>
-            <td><code>---</code></td>
-            <td><hr style="margin:5px 0;"></td>
-          </tr>
-        </table>
-        
-        <h4>Tips:</h4>
-        <ul>
-          <li>Use <strong>Ctrl/Cmd + B</strong> for bold</li>
-          <li>Use <strong>Ctrl/Cmd + I</strong> for italic</li>
-          <li>Use <strong>Ctrl/Cmd + K</strong> for links</li>
-          <li>Click the image button to add images</li>
-          <li>Preview your letter before publishing</li>
-        </ul>
-      </div>
-    </div>
+      
+      <!-- Hidden submit buttons for form -->
+      <button type="submit" name="action" value="publish" id="publish-btn" style="display:none;"></button>
+      <button type="submit" name="action" value="draft" id="draft-btn" style="display:none;"></button>
+    </form>
   </div>
   
-  <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 20px;">
-    <button type="submit" name="action" value="publish" class="btn btn-primary" style="font-size: 16px; padding: 12px 24px; background: var(--fg); color: white; border: none;">
-      📮 Queue for Publishing
-    </button>
-    <button type="submit" name="action" value="draft" class="btn" style="font-size: 16px; padding: 12px 24px; background: #f3f4f6; color: var(--fg); border: 1px solid var(--border);">
-      💾 Save as Draft
-    </button>
-    <% if (typeof draft !== 'undefined' && draft) { %>
-      <span style="color: #22c55e; font-size: 14px; margin-left: auto;">
-        ✓ Draft saved <%= draft.last_saved_at ? new Date(draft.last_saved_at).toLocaleTimeString() : '' %>
-      </span>
-    <% } %>
+  <!-- Minimal word count -->
+  <div class="word-count">
+    <span id="word-count">0</span> words
   </div>
   
-  <p class="hint" style="margin-top: 16px;">
-    <strong>💾 Drafts:</strong> Save your work and come back to it. Perfect for thoughtful writing over multiple days.
-  </p>
-  <p class="hint">💡 Letters publish after a 12-hour steep. This gives you time to reflect, but not to obsess.</p>
-  <p class="hint">📝 Markdown tips: Use **bold** for emphasis, > for quotes, and --- for dividers.</p>
-</form>
-
-<!-- Image Upload Modal -->
-<div id="image-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
-  <div style="background:white; border-radius:12px; padding:24px; max-width:500px; width:90%; max-height:80vh; overflow-y:auto;">
-    <h3 style="margin-top:0;">Add Image</h3>
-    
-    <div style="margin:16px 0;">
-      <label style="display:block; margin-bottom:8px; font-weight:600;">Option 1: Image URL <span style="color:#22c55e; font-size:11px; font-weight:normal;">(RECOMMENDED)</span></label>
-      <input type="url" id="image-url" placeholder="https://example.com/image.jpg" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px;">
-      <p style="font-size:12px; color:var(--muted); margin:4px 0;">Best option - links to external image, no size limit</p>
-    </div>
-    
-    <div style="margin:16px 0;">
-      <div style="text-align:center; color:var(--muted); margin:16px 0;">— OR —</div>
-    </div>
-    
-    <div style="margin:16px 0;">
-      <label style="display:block; margin-bottom:8px; font-weight:600;">Option 2: Upload Image</label>
-      <input type="file" id="image-file" accept="image/*" style="width:100%;">
-      <p style="font-size:12px; color:var(--muted); margin:4px 0;">Max 2MB - Image will be embedded in your letter</p>
-      <p style="font-size:11px; color:#666; margin:4px 0;">📷 Shows as a clean placeholder while editing</p>
-    </div>
-    
-    <div style="margin:16px 0;">
-      <label style="display:block; margin-bottom:8px;">Alt Text (optional)</label>
-      <input type="text" id="image-alt" placeholder="Description of the image" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px;">
-    </div>
-    
-    <div id="image-preview" style="margin:16px 0; display:none;">
-      <label style="display:block; margin-bottom:8px;">Preview:</label>
-      <img id="preview-img" style="max-width:100%; border-radius:8px; border:1px solid var(--border);">
-    </div>
-    
-    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:20px;">
-      <button type="button" onclick="closeImageModal()" style="padding:8px 16px; border:1px solid var(--border); border-radius:6px; background:white;">Cancel</button>
-      <button type="button" onclick="insertImageToEditor()" style="padding:8px 16px; border:1px solid var(--border); border-radius:6px; background:var(--fg); color:white;">Insert Image</button>
+  <!-- Floating tools -->
+  <div class="writing-tools" id="writing-tools">
+    <button class="tool-trigger" onclick="toggleFormatPalette()" title="Format">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 3v18m-9-9h18"/>
+      </svg>
+    </button>
+  </div>
+  
+  <!-- Format palette -->
+  <div class="format-palette" id="format-palette">
+    <button class="format-btn" onclick="format('bold')" title="Bold">
+      <strong>B</strong>
+    </button>
+    <button class="format-btn" onclick="format('italic')" title="Italic">
+      <em>I</em>
+    </button>
+    <button class="format-btn" onclick="format('heading')" title="Heading">
+      H
+    </button>
+    <div class="format-divider"></div>
+    <button class="format-btn" onclick="format('quote')" title="Quote">
+      "
+    </button>
+    <button class="format-btn" onclick="format('link')" title="Link">
+      🔗
+    </button>
+    <button class="format-btn" onclick="format('image')" title="Image">
+      📷
+    </button>
+    <div class="format-divider"></div>
+    <button class="format-btn" onclick="format('list')" title="List">
+      •
+    </button>
+    <button class="format-btn" onclick="showPreview()" title="Preview">
+      👁
+    </button>
+  </div>
+  
+  <!-- Action buttons -->
+  <div class="writing-actions">
+    <button class="action-btn" onclick="saveDraft()">Save Draft</button>
+    <button class="action-btn primary" onclick="publish()">Publish in 12h</button>
+  </div>
+  
+  <!-- Preview overlay -->
+  <div class="preview-overlay" id="preview-overlay">
+    <button class="preview-close" onclick="hidePreview()">✕</button>
+    <div class="preview-content" id="preview-content"></div>
+  </div>
+  
+  <!-- Image modal - minimal version -->
+  <div id="image-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(255,255,255,0.95); z-index:2000; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:8px; padding:30px; max-width:400px; width:90%; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+      <h3 style="margin:0 0 20px 0; font-weight:400; font-size:18px;">Add Image</h3>
+      <input type="url" id="image-url" placeholder="Image URL" style="width:100%; padding:10px; border:1px solid #e0e0e0; border-radius:4px; margin-bottom:10px;">
+      <input type="text" id="image-alt" placeholder="Description (optional)" style="width:100%; padding:10px; border:1px solid #e0e0e0; border-radius:4px; margin-bottom:20px;">
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button onclick="closeImageModal()" style="padding:8px 16px; border:1px solid #e0e0e0; background:white; border-radius:4px; cursor:pointer;">Cancel</button>
+        <button onclick="insertImage()" style="padding:8px 16px; border:none; background:#333; color:white; border-radius:4px; cursor:pointer;">Insert</button>
+      </div>
     </div>
   </div>
-</div>
+</body>
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 <script>
-  const editor = document.getElementById('markdown-editor');
-  const preview = document.getElementById('preview');
-  const charCount = document.getElementById('char-count');
+  const titleInput = document.getElementById('title-input');
+  const bodyInput = document.getElementById('body-input');
+  const wordCount = document.getElementById('word-count');
+  const container = document.getElementById('writing-container');
+  const formatPalette = document.getElementById('format-palette');
   
-  // Store uploaded images with placeholders - MUST be declared before any functions use them
-  let uploadedImages = {};
-  let imageCounter = 0;
-  
-  // Configure marked options
-  marked.setOptions({
-    breaks: true,
-    gfm: true,
-    headerIds: false,
-    mangle: false
-  });
-  
-  // Update preview
-  function updatePreview() {
-    let markdown = editor.value;
-    
-    // Replace image placeholders with actual base64 data for preview only
-    for (const [imageId, base64Data] of Object.entries(uploadedImages)) {
-      const placeholderPattern = new RegExp(`\\(📷 ${imageId}\\)`, 'g');
-      markdown = markdown.replace(placeholderPattern, `(${base64Data})`);
-    }
-    
-    // Remove HTML comments from preview
-    markdown = markdown.replace(/<!--[\s\S]*?-->/g, '');
-    
-    if (markdown.trim()) {
-      const html = marked.parse(markdown);
-      // Allow data URLs for embedded images in preview
-      const clean = DOMPurify.sanitize(html, {
-        ADD_DATA_URI_TAGS: ['img'],
-        ADD_ATTR: ['target']
-      });
-      preview.innerHTML = clean;
-    } else {
-      preview.innerHTML = '<p style="color: var(--muted); text-align: center; margin-top: 100px;">Your formatted letter will appear here...</p>';
-    }
-    // Show character count of the actual editor content (with placeholders)
-    charCount.textContent = editor.value.length;
+  // Auto-resize title
+  function resizeTitle() {
+    titleInput.style.height = 'auto';
+    titleInput.style.height = titleInput.scrollHeight + 'px';
   }
   
-  // Insert markdown syntax
-  function insertMarkdown(before, after) {
-    const start = editor.selectionStart;
-    const end = editor.selectionEnd;
-    const text = editor.value;
+  titleInput.addEventListener('input', resizeTitle);
+  resizeTitle();
+  
+  // Word count
+  function updateWordCount() {
+    const text = bodyInput.value;
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    wordCount.textContent = words;
+  }
+  
+  bodyInput.addEventListener('input', updateWordCount);
+  updateWordCount();
+  
+  // Typing indicator
+  let typingTimer;
+  bodyInput.addEventListener('input', () => {
+    container.classList.add('typing');
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+      container.classList.remove('typing');
+    }, 2000);
+  });
+  
+  // Focus indicator
+  bodyInput.addEventListener('focus', () => {
+    container.classList.add('focused');
+  });
+  
+  bodyInput.addEventListener('blur', () => {
+    container.classList.remove('focused');
+  });
+  
+  // Format palette
+  function toggleFormatPalette() {
+    formatPalette.classList.toggle('active');
+  }
+  
+  // Click outside to close
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.writing-tools') && !e.target.closest('.format-palette')) {
+      formatPalette.classList.remove('active');
+    }
+  });
+  
+  // Format functions
+  function format(type) {
+    const start = bodyInput.selectionStart;
+    const end = bodyInput.selectionEnd;
+    const text = bodyInput.value;
     const selected = text.substring(start, end);
     
+    let before = '', after = '';
+    switch(type) {
+      case 'bold':
+        before = '**'; after = '**';
+        break;
+      case 'italic':
+        before = '*'; after = '*';
+        break;
+      case 'heading':
+        before = '## '; after = '';
+        break;
+      case 'quote':
+        before = '> '; after = '';
+        break;
+      case 'link':
+        before = '['; after = '](url)';
+        break;
+      case 'list':
+        before = '- '; after = '';
+        break;
+      case 'image':
+        document.getElementById('image-modal').style.display = 'flex';
+        return;
+    }
+    
     const replacement = before + (selected || 'text') + after;
-    editor.value = text.substring(0, start) + replacement + text.substring(end);
-    
-    // Set cursor position
-    const cursorPos = start + before.length + (selected ? selected.length : 4);
-    editor.focus();
-    editor.setSelectionRange(cursorPos, cursorPos);
-    
-    updatePreview();
+    bodyInput.value = text.substring(0, start) + replacement + text.substring(end);
+    bodyInput.focus();
+    bodyInput.setSelectionRange(start + before.length, start + before.length + (selected || 'text').length);
+    formatPalette.classList.remove('active');
   }
   
-  // Update preview on input
-  editor.addEventListener('input', updatePreview);
-  
-  // Initial preview
-  updatePreview();
-  
-  // Tab switching
-  function switchTab(tabName) {
-    // Update tab buttons
-    document.querySelectorAll('.editor-tab').forEach(tab => {
-      tab.classList.remove('active');
+  // Preview
+  function showPreview() {
+    const title = titleInput.value;
+    const body = bodyInput.value;
+    
+    marked.setOptions({
+      breaks: true,
+      gfm: true
     });
-    event.target.classList.add('active');
     
-    // Update tab content
-    document.querySelectorAll('.tab-content').forEach(content => {
-      content.classList.remove('active');
-    });
-    document.getElementById(tabName + '-tab').classList.add('active');
+    const html = `<h1>${title}</h1>` + marked.parse(body);
+    const clean = DOMPurify.sanitize(html);
     
-    // Update preview when switching to preview tab
-    if (tabName === 'preview') {
-      updatePreview();
-    }
-    
-    // Focus editor when switching to write tab
-    if (tabName === 'write') {
-      editor.focus();
-    }
+    document.getElementById('preview-content').innerHTML = clean;
+    document.getElementById('preview-overlay').classList.add('active');
+    formatPalette.classList.remove('active');
   }
   
-  // Keyboard shortcuts
-  editor.addEventListener('keydown', (e) => {
-    if (e.ctrlKey || e.metaKey) {
-      switch(e.key) {
-        case 'b':
-          e.preventDefault();
-          insertMarkdown('**', '**');
-          break;
-        case 'i':
-          e.preventDefault();
-          insertMarkdown('*', '*');
-          break;
-        case 'k':
-          e.preventDefault();
-          insertMarkdown('[', '](url)');
-          break;
-      }
-    }
-  });
+  function hidePreview() {
+    document.getElementById('preview-overlay').classList.remove('active');
+  }
   
   // Image handling
-  function insertImage() {
-    document.getElementById('image-modal').style.display = 'flex';
-    document.getElementById('image-url').value = '';
-    document.getElementById('image-alt').value = '';
-    document.getElementById('image-file').value = '';
-    document.getElementById('image-preview').style.display = 'none';
-  }
-  
   function closeImageModal() {
     document.getElementById('image-modal').style.display = 'none';
   }
   
-  // Preview image from URL
-  document.getElementById('image-url').addEventListener('input', function() {
-    const url = this.value;
+  function insertImage() {
+    const url = document.getElementById('image-url').value;
+    const alt = document.getElementById('image-alt').value || 'Image';
+    
     if (url) {
-      document.getElementById('preview-img').src = url;
-      document.getElementById('image-preview').style.display = 'block';
-      document.getElementById('image-file').value = ''; // Clear file input
-    } else {
-      document.getElementById('image-preview').style.display = 'none';
+      const markdown = `![${alt}](${url})`;
+      const start = bodyInput.selectionStart;
+      const text = bodyInput.value;
+      bodyInput.value = text.substring(0, start) + markdown + text.substring(start);
+      bodyInput.focus();
+      closeImageModal();
+      document.getElementById('image-url').value = '';
+      document.getElementById('image-alt').value = '';
     }
-  });
+  }
   
-  // Preview image from file upload
-  document.getElementById('image-file').addEventListener('change', function() {
-    const file = this.files[0];
-    if (file) {
-      // Reasonable limit for embedded images (2MB)
-      const maxSize = 2 * 1024 * 1024; // 2MB
-      if (file.size > maxSize) {
-        const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-        alert(`Image is ${sizeMB}MB - too large!\n\n` +
-              `Please use images under 2MB or use an image URL for larger files.`);
-        this.value = '';
-        document.getElementById('image-preview').style.display = 'none';
-        return;
+  // Actions
+  function saveDraft() {
+    document.getElementById('draft-btn').click();
+  }
+  
+  function publish() {
+    document.getElementById('publish-btn').click();
+  }
+  
+  // Auto-save indicator
+  <% if (typeof draft !== 'undefined' && draft) { %>
+    document.getElementById('saved-indicator').classList.add('show');
+    setTimeout(() => {
+      document.getElementById('saved-indicator').classList.remove('show');
+    }, 3000);
+  <% } %>
+  
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch(e.key) {
+        case 'b':
+          e.preventDefault();
+          format('bold');
+          break;
+        case 'i':
+          e.preventDefault();
+          format('italic');
+          break;
+        case 's':
+          e.preventDefault();
+          saveDraft();
+          break;
+        case 'Enter':
+          e.preventDefault();
+          publish();
+          break;
       }
-      
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        document.getElementById('preview-img').src = e.target.result;
-        document.getElementById('image-preview').style.display = 'block';
-        document.getElementById('image-url').value = ''; // Clear URL input
-      };
-      reader.readAsDataURL(file);
     }
-  });
-  
-  function insertImageToEditor() {
-    const urlInput = document.getElementById('image-url').value;
-    const fileInput = document.getElementById('image-file').files[0];
-    const altText = document.getElementById('image-alt').value || 'Image';
     
-    if (urlInput) {
-      // Insert URL image - this is fine as-is
-      const markdown = `![${altText}](${urlInput})`;
-      insertAtCursor(markdown);
-      closeImageModal();
-    } else if (fileInput) {
-        // For uploaded images, use a placeholder in the editor
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          imageCounter++;
-          const imageId = `uploaded-image-${imageCounter}`;
-          // Create a readable placeholder that shows it's an uploaded image
-          const placeholder = `![${altText}](📷 ${imageId})`;
-          
-          // Store the actual base64 data
-          uploadedImages[imageId] = e.target.result;
-          
-          // Insert the clean placeholder in the editor
-          insertAtCursor(placeholder);
-          
-          // Add a note about the image
-          const imageNote = `\n<!-- Image uploaded: ${fileInput.name} (${Math.round(fileInput.size/1024)}KB) -->\n`;
-          insertAtCursor(imageNote);
-          
-          // Update preview to show the actual image
-          updatePreview();
-          closeImageModal();
-        };
-      reader.readAsDataURL(fileInput);
-    } else {
-      alert('Please provide an image URL or select a file');
-    }
-  }
-  
-  function insertAtCursor(text) {
-    const start = editor.selectionStart;
-    const end = editor.selectionEnd;
-    const value = editor.value;
-    
-    editor.value = value.substring(0, start) + text + value.substring(end);
-    editor.focus();
-    editor.setSelectionRange(start + text.length, start + text.length);
-    updatePreview();
-  }
-  
-  // Close modal on escape key
-  document.addEventListener('keydown', function(e) {
+    // Escape to close modals
     if (e.key === 'Escape') {
+      hidePreview();
       closeImageModal();
+      formatPalette.classList.remove('active');
     }
-  });
-  
-  // Close modal on background click
-  document.getElementById('image-modal').addEventListener('click', function(e) {
-    if (e.target === this) {
-      closeImageModal();
-    }
-  });
-  
-  // Handle form submission - replace placeholders with actual image data
-  document.getElementById('compose-form').addEventListener('submit', function(e) {
-    // Replace all image placeholders with their actual base64 data
-    let content = editor.value;
-    for (const [imageId, base64Data] of Object.entries(uploadedImages)) {
-      const placeholderPattern = new RegExp(`\\(📷 ${imageId}\\)`, 'g');
-      content = content.replace(placeholderPattern, `(${base64Data})`);
-    }
-    // Remove HTML comments before submission
-    content = content.replace(/<!--[\s\S]*?-->/g, '');
-    // Update the textarea with the final content before submission
-    editor.value = content;
   });
 </script>
