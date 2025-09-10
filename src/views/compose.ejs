@@ -17,16 +17,19 @@
     min-height: 100vh;
   }
   
-  /* Subtle header */
+  /* Subtle header - fades in then out */
   .writing-header {
     margin-bottom: 60px;
     opacity: 0;
-    animation: fadeIn 1s ease forwards;
+    animation: fadeInOut 4s ease forwards;
     animation-delay: 0.2s;
   }
   
-  @keyframes fadeIn {
-    to { opacity: 1; }
+  @keyframes fadeInOut {
+    0% { opacity: 0; }
+    25% { opacity: 1; }
+    75% { opacity: 1; }
+    100% { opacity: 0; }
   }
   
   .surface-title {
@@ -35,6 +38,15 @@
     color: #999;
     letter-spacing: 0.5px;
     margin: 0;
+  }
+  
+  .surface-quote {
+    font-size: 15px;
+    font-style: italic;
+    color: #aaa;
+    margin: 12px 0 0 0;
+    font-family: Georgia, serif;
+    line-height: 1.5;
   }
   
   /* Title input - borderless */
@@ -359,6 +371,7 @@
   <div class="writing-container" id="writing-container">
     <div class="writing-header">
       <p class="surface-title">WRITING SURFACE</p>
+      <p class="surface-quote">"I didn't have time to write a short letter, so I wrote a long one instead." — Mark Twain</p>
     </div>
     
     <form method="post" id="compose-form">
