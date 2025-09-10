@@ -16,22 +16,28 @@ if (!hasAdminColumn) {
   console.log('is_admin column already exists, skipping migration.');
 }
 
-// Make a specific user admin if ADMIN_EMAIL is set
-if (process.env.ADMIN_EMAIL) {
-  const user = db.prepare('SELECT id, email FROM users WHERE email = ?').get(process.env.ADMIN_EMAIL);
-  if (user) {
-    db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(user.id);
-    console.log(`Made user ${user.email} an admin.`);
+// Only make robb@onereach.com an admin
+const adminEmail = 'robb@onereach.com';
+const adminUser = db.prepare('SELECT id, email, is_admin FROM users WHERE email = ?').get(adminEmail);
+
+if (adminUser) {
+  if (adminUser.is_admin !== 1) {
+    db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(adminUser.id);
+    console.log(`Made user ${adminUser.email} an admin.`);
   } else {
-    console.log(`User with email ${process.env.ADMIN_EMAIL} not found.`);
+    console.log(`User ${adminUser.email} is already an admin.`);
   }
 } else {
-  // Make the first user an admin as fallback
-  const firstUser = db.prepare('SELECT id, email FROM users ORDER BY id LIMIT 1').get();
-  if (firstUser) {
-    db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(firstUser.id);
-    console.log(`Made first user ${firstUser.email} an admin.`);
-  }
+  console.log(`Admin user ${adminEmail} not found. Will be created when they sign up.`);
+}
+
+// Remove admin status from any other users who shouldn't have it
+const wrongAdmins = db.prepare('SELECT id, email FROM users WHERE is_admin = 1 AND email != ?').all(adminEmail);
+if (wrongAdmins.length > 0) {
+  wrongAdmins.forEach(user => {
+    db.prepare('UPDATE users SET is_admin = 0 WHERE id = ?').run(user.id);
+    console.log(`Removed admin status from ${user.email}`);
+  });
 }
 
 db.close();
