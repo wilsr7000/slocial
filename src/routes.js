@@ -722,7 +722,7 @@ function buildRouter(db) {
   // Force publish a pending letter immediately
   router.post('/admin/publish-now/:id', requireAdmin, (req, res) => {
     const id = Number(req.params.id);
-    db.prepare('UPDATE letters SET is_published = 1, publish_at = datetime("now") WHERE id = ?').run(id);
+    db.prepare("UPDATE letters SET is_published = 1, publish_at = datetime('now') WHERE id = ?").run(id);
     res.redirect('/admin');
   });
 
