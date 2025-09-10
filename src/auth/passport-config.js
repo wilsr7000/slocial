@@ -41,13 +41,21 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         .get('google', profile.id);
       
       if (!user) {
-        // Check if email already exists
-        user = db.prepare('SELECT * FROM users WHERE email = ?').get(profile.emails[0].value);
+        // Check if email already exists (from regular signup or other OAuth)
+        const email = profile.emails[0].value;
+        user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
         
         if (user) {
-          // Link existing account with Google
-          db.prepare('UPDATE users SET oauth_provider = ?, oauth_id = ?, avatar_url = COALESCE(avatar_url, ?) WHERE id = ?')
-            .run('google', profile.id, profile.photos[0]?.value, user.id);
+          console.log('Linking existing account with Google Sign-In:', user.email);
+          // Link existing account with Google - only update if not already linked to another provider
+          if (!user.oauth_provider) {
+            db.prepare('UPDATE users SET oauth_provider = ?, oauth_id = ?, avatar_url = COALESCE(avatar_url, ?) WHERE id = ?')
+              .run('google', profile.id, profile.photos?.[0]?.value, user.id);
+          } else {
+            // User already has OAuth from another provider
+            console.log('User already has OAuth provider:', user.oauth_provider);
+            // Still allow login
+          }
         } else {
           // Create new user
           const email = profile.emails[0].value;
@@ -109,8 +117,22 @@ if (process.env.APPLE_SERVICE_ID && process.env.APPLE_TEAM_ID && process.env.APP
       }
       
       // Apple provides limited info, use the ID token data
-      const email = idToken.email || `${idToken.sub}@privaterelay.appleid.com`;
+      // Note: Apple only provides email on first sign-in, not subsequent ones
+      let email = idToken.email;
       const appleId = idToken.sub;
+      
+      // If no email provided (subsequent sign-ins), try to find user by Apple ID first
+      if (!email) {
+        const existingUser = db.prepare('SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?')
+          .get('apple', appleId);
+        if (existingUser) {
+          console.log('Found existing Apple user by ID:', existingUser.email);
+          db.close();
+          return done(null, existingUser);
+        }
+        // If no existing user and no email, create a private relay email
+        email = `${appleId}@privaterelay.appleid.com`;
+      }
       
       console.log('Apple Sign-In data:', { email, appleId });
       
@@ -119,13 +141,20 @@ if (process.env.APPLE_SERVICE_ID && process.env.APPLE_TEAM_ID && process.env.APP
         .get('apple', appleId);
       
       if (!user) {
-        // Check if email already exists
+        // Check if email already exists (from regular signup or other OAuth)
         user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
         
         if (user) {
-          // Link existing account with Apple
-          db.prepare('UPDATE users SET oauth_provider = ?, oauth_id = ? WHERE id = ?')
-            .run('apple', appleId, user.id);
+          console.log('Linking existing account with Apple Sign-In:', user.email);
+          // Link existing account with Apple - only update if not already linked to another provider
+          if (!user.oauth_provider) {
+            db.prepare('UPDATE users SET oauth_provider = ?, oauth_id = ? WHERE id = ?')
+              .run('apple', appleId, user.id);
+          } else {
+            // User already has OAuth from another provider, just add Apple ID
+            console.log('User already has OAuth provider:', user.oauth_provider);
+            // Still allow login but don't overwrite existing OAuth
+          }
         } else {
           // Create new user
           const emailPrefix = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') || 'user';
