@@ -54,7 +54,7 @@ function buildRouter(db) {
       FROM letters l
       JOIN users u ON u.id = l.author_id
       LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
-      WHERE l.is_published = 1 AND l.publish_at <= @now
+      WHERE l.is_published = 1 AND l.is_draft = 0 AND l.publish_at <= @now
       ORDER BY l.publish_at DESC
       LIMIT @limit OFFSET @offset
     `).all({ now, limit: pageSize, offset, uid: req.session.user?.id || -1 });
@@ -260,6 +260,66 @@ function buildRouter(db) {
     });
   });
   
+  // Publish draft directly from drafts page
+  router.post('/drafts/:id/publish', requireAuth, (req, res) => {
+    const draftId = req.params.id;
+    const now = dayjs();
+    
+    // Verify ownership
+    const draft = db.prepare('SELECT * FROM letters WHERE id = ? AND author_id = ? AND is_draft = 1')
+      .get(draftId, req.session.user.id);
+    
+    if (!draft) {
+      return res.status(404).send('Draft not found');
+    }
+    
+    // Check 24-hour limit
+    const lastPublished = db.prepare('SELECT created_at FROM letters WHERE author_id = ? AND is_draft = 0 ORDER BY created_at DESC LIMIT 1')
+      .get(req.session.user.id);
+    
+    if (lastPublished && dayjs(lastPublished.created_at).isAfter(now.subtract(24, 'hour'))) {
+      return res.status(429).send('You can only publish one letter per 24 hours. Please wait before publishing.');
+    }
+    
+    // Convert draft to published letter
+    const publish_at = now.add(12, 'hour').toISOString();
+    db.prepare(`
+      UPDATE letters 
+      SET is_draft = 0, publish_at = ?, last_saved_at = NULL
+      WHERE id = ?
+    `).run(publish_at, draftId);
+    
+    eventTracker.track('draft_publish', {
+      userId: req.session.user.id,
+      sessionId: req.sessionID,
+      letterId: draftId,
+      metadata: { title: draft.title.slice(0, 50) }
+    });
+    
+    res.redirect(`/letters/${draftId}`);
+  });
+  
+  // Delete draft
+  router.post('/drafts/:id/delete', requireAuth, (req, res) => {
+    const draftId = req.params.id;
+    
+    // Verify ownership and delete
+    const result = db.prepare('DELETE FROM letters WHERE id = ? AND author_id = ? AND is_draft = 1')
+      .run(draftId, req.session.user.id);
+    
+    if (result.changes === 0) {
+      return res.status(404).send('Draft not found');
+    }
+    
+    eventTracker.track('draft_delete', {
+      userId: req.session.user.id,
+      sessionId: req.sessionID,
+      letterId: draftId
+    });
+    
+    res.redirect('/drafts');
+  });
+  
   router.get('/compose/draft/:id', requireAuth, (req, res) => {
     const draft = db.prepare('SELECT * FROM letters WHERE id = ? AND author_id = ? AND is_draft = 1')
       .get(req.params.id, req.session.user.id);
@@ -383,7 +443,8 @@ function buildRouter(db) {
       SELECT l.*, u.handle, u.bio, u.avatar_url,
         (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
         EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate
-      FROM letters l JOIN users u ON u.id = l.author_id WHERE l.id = @id
+      FROM letters l JOIN users u ON u.id = l.author_id 
+      WHERE l.id = @id AND (l.is_draft = 0 OR (l.is_draft = 1 AND l.author_id = @uid))
     `).get({ id, uid });
     if (!letter) return res.status(404).send('Not found');
     
