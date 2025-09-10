@@ -3,21 +3,41 @@ const path = require('path');
 
 class EventTracker {
   constructor() {
-    const dbFile = process.env.SQLITE_FILE || path.join(__dirname, '../db/slocial.db');
-    this.db = new Database(dbFile);
-    
-    // Prepare statements for better performance
-    this.insertStmt = this.db.prepare(`
-      INSERT INTO events (event_type, user_id, session_id, ip_address, user_agent, path, method, letter_id, duration_ms, metadata)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    
-    // Track active page views for duration calculation
-    this.activeViews = new Map();
+    try {
+      const dbFile = process.env.SQLITE_FILE || path.join(__dirname, '../db/slocial.db');
+      this.db = new Database(dbFile);
+      
+      // Check if events table exists
+      const tableExists = this.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='events'").get();
+      
+      if (tableExists) {
+        // Prepare statements for better performance
+        this.insertStmt = this.db.prepare(`
+          INSERT INTO events (event_type, user_id, session_id, ip_address, user_agent, path, method, letter_id, duration_ms, metadata)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+      } else {
+        console.warn('Events table does not exist. Run migrations: npm run migrate');
+        this.insertStmt = null;
+      }
+      
+      // Track active page views for duration calculation
+      this.activeViews = new Map();
+    } catch (error) {
+      console.error('EventTracker initialization error:', error);
+      this.db = null;
+      this.insertStmt = null;
+      this.activeViews = new Map();
+    }
   }
 
   track(eventType, data = {}) {
     try {
+      if (!this.insertStmt) {
+        // Silently skip if events table doesn't exist
+        return;
+      }
+      
       const {
         userId = null,
         sessionId = null,
@@ -89,54 +109,76 @@ class EventTracker {
 
   // Get events for admin panel
   getRecentEvents(limit = 100, filters = {}) {
-    let query = `
-      SELECT e.*, u.handle as user_handle
-      FROM events e
-      LEFT JOIN users u ON e.user_id = u.id
-      WHERE 1=1
-    `;
-    
-    const params = [];
-    
-    if (filters.eventType) {
-      query += ' AND e.event_type = ?';
-      params.push(filters.eventType);
+    if (!this.db) {
+      return [];
     }
     
-    if (filters.userId) {
-      query += ' AND e.user_id = ?';
-      params.push(filters.userId);
+    try {
+      let query = `
+        SELECT e.*, u.handle as user_handle
+        FROM events e
+        LEFT JOIN users u ON e.user_id = u.id
+        WHERE 1=1
+      `;
+      
+      const params = [];
+      
+      if (filters.eventType) {
+        query += ' AND e.event_type = ?';
+        params.push(filters.eventType);
+      }
+      
+      if (filters.userId) {
+        query += ' AND e.user_id = ?';
+        params.push(filters.userId);
+      }
+      
+      if (filters.startDate) {
+        query += ' AND e.created_at >= ?';
+        params.push(filters.startDate);
+      }
+      
+      query += ' ORDER BY e.created_at DESC LIMIT ?';
+      params.push(limit);
+      
+      const events = this.db.prepare(query).all(...params);
+      
+      // Parse metadata JSON
+      return events.map(event => ({
+        ...event,
+        metadata: event.metadata ? JSON.parse(event.metadata) : {}
+      }));
+    } catch (error) {
+      console.error('Error getting recent events:', error);
+      return [];
     }
-    
-    if (filters.startDate) {
-      query += ' AND e.created_at >= ?';
-      params.push(filters.startDate);
-    }
-    
-    query += ' ORDER BY e.created_at DESC LIMIT ?';
-    params.push(limit);
-    
-    const events = this.db.prepare(query).all(...params);
-    
-    // Parse metadata JSON
-    return events.map(event => ({
-      ...event,
-      metadata: event.metadata ? JSON.parse(event.metadata) : {}
-    }));
   }
 
   // Get analytics summary
   getAnalytics(period = '24h') {
-    const periodMap = {
-      '1h': "datetime('now', '-1 hour')",
-      '24h': "datetime('now', '-1 day')",
-      '7d': "datetime('now', '-7 days')",
-      '30d': "datetime('now', '-30 days')"
-    };
+    if (!this.db) {
+      return {
+        totalEvents: 0,
+        uniqueVisitors: 0,
+        pageViews: 0,
+        logins: 0,
+        avgReadingTime: 0,
+        topPages: [],
+        eventTypes: []
+      };
+    }
     
-    const since = periodMap[period] || periodMap['24h'];
-    
-    const stats = {
+    try {
+      const periodMap = {
+        '1h': "datetime('now', '-1 hour')",
+        '24h': "datetime('now', '-1 day')",
+        '7d': "datetime('now', '-7 days')",
+        '30d': "datetime('now', '-30 days')"
+      };
+      
+      const since = periodMap[period] || periodMap['24h'];
+      
+      const stats = {
       totalEvents: this.db.prepare(`
         SELECT COUNT(*) as count FROM events WHERE created_at >= ${since}
       `).get().count,
@@ -173,9 +215,21 @@ class EventTracker {
         WHERE created_at >= ${since}
         GROUP BY event_type ORDER BY count DESC
       `).all()
-    };
-    
-    return stats;
+      };
+      
+      return stats;
+    } catch (error) {
+      console.error('Error getting analytics:', error);
+      return {
+        totalEvents: 0,
+        uniqueVisitors: 0,
+        pageViews: 0,
+        logins: 0,
+        avgReadingTime: 0,
+        topPages: [],
+        eventTypes: []
+      };
+    }
   }
 
   // Clean up old events (optional, for maintenance)
