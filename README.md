@@ -1,6 +1,6 @@
 # slocial.org
 
-A slow social app for reflective, high-quality interactions. Letters publish after 12 hours; you can write once per day.
+A slow social app for reflective, high-quality interactions. Write slow, read slow. Letters publish after 12 hours.
 
 ## Dev
 
