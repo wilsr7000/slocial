@@ -524,13 +524,14 @@ function buildRouter(db) {
       if (action === 'draft') {
         // Save as draft
         const info = db.prepare(`
-          INSERT INTO letters (author_id, title, body, is_draft, publish_at, last_saved_at, is_published) 
-          VALUES (?, ?, ?, 1, ?, ?, 0)
+          INSERT INTO letters (author_id, title, body, is_draft, publish_at, last_saved_at, created_at, is_published) 
+          VALUES (?, ?, ?, 1, ?, ?, ?, 0)
         `).run(
           req.session.user.id, 
           title, 
           body, 
           now.add(12, 'hour').toISOString(), // Default publish time
+          now.toISOString(),
           now.toISOString()
         );
         
@@ -552,8 +553,9 @@ function buildRouter(db) {
         }
 
         const publish_at = dayjs().add(12, 'hour').toISOString();
-        const info = db.prepare('INSERT INTO letters (author_id, title, body, publish_at, is_published, is_draft) VALUES (?, ?, ?, ?, 0, 0)')
-          .run(req.session.user.id, title, body, publish_at);
+        const now = dayjs().toISOString();
+        const info = db.prepare('INSERT INTO letters (author_id, title, body, publish_at, created_at, is_published, is_draft) VALUES (?, ?, ?, ?, ?, 0, 0)')
+          .run(req.session.user.id, title, body, publish_at, now);
         
         eventTracker.track('letter_create', {
           userId: req.session.user.id,
