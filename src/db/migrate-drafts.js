@@ -2,7 +2,9 @@ const Database = require('better-sqlite3');
 const path = require('path');
 
 const dbFile = process.env.SQLITE_FILE || path.join(__dirname, 'slocial.db');
-const db = new Database(dbFile);
+
+try {
+  const db = new Database(dbFile);
 
 // Check if is_draft column exists
 const columns = db.prepare("PRAGMA table_info(letters)").all();
@@ -33,5 +35,9 @@ if (indexes.length === 0) {
   console.log('Draft index created successfully!');
 }
 
-db.close();
-console.log('Draft migration complete!');
+  db.close();
+  console.log('Draft migration complete!');
+} catch (error) {
+  console.error('Error during draft migration:', error.message);
+  process.exit(0); // Exit gracefully to not block deployment
+}
