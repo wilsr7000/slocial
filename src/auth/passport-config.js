@@ -38,19 +38,19 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       
       // Check if user exists with this Google ID
       let user = db.prepare('SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?')
-        .get('google', profile.id);
+        .get('google', String(profile.id));
       
       if (!user) {
         // Check if email already exists (from regular signup or other OAuth)
         const email = profile.emails[0].value;
-        user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+        user = db.prepare('SELECT * FROM users WHERE email = ?').get(String(email));
         
         if (user) {
           console.log('Linking existing account with Google Sign-In:', user.email);
           // Link existing account with Google - only update if not already linked to another provider
           if (!user.oauth_provider) {
             db.prepare('UPDATE users SET oauth_provider = ?, oauth_id = ?, avatar_url = COALESCE(avatar_url, ?) WHERE id = ?')
-              .run('google', profile.id, profile.photos?.[0]?.value, user.id);
+              .run('google', String(profile.id), profile.photos?.[0]?.value || null, user.id);
           } else {
             // User already has OAuth from another provider
             console.log('User already has OAuth provider:', user.oauth_provider);
@@ -66,9 +66,9 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             VALUES (?, ?, ?, ?, ?, ?, ?)
           `).run(
             handle,
-            email,
+            String(email),
             'google',
-            profile.id,
+            String(profile.id),
             profile.photos?.[0]?.value || null,
             `Google user since ${new Date().getFullYear()}`,
             null  // OAuth users don't need password
@@ -121,10 +121,24 @@ if (process.env.APPLE_SERVICE_ID && process.env.APPLE_TEAM_ID && process.env.APP
       let email = idToken.email;
       const appleId = idToken.sub;
       
+      console.log('Apple ID Token details:', {
+        sub: idToken.sub,
+        email: idToken.email,
+        email_verified: idToken.email_verified,
+        is_private_email: idToken.is_private_email
+      });
+      
+      // Ensure appleId is a string
+      if (!appleId || typeof appleId !== 'string') {
+        console.error('Invalid Apple ID:', appleId);
+        db.close();
+        return done(new Error('Invalid Apple ID received'));
+      }
+      
       // If no email provided (subsequent sign-ins), try to find user by Apple ID first
       if (!email) {
         const existingUser = db.prepare('SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?')
-          .get('apple', appleId);
+          .get('apple', String(appleId));
         if (existingUser) {
           console.log('Found existing Apple user by ID:', existingUser.email);
           db.close();
@@ -138,18 +152,18 @@ if (process.env.APPLE_SERVICE_ID && process.env.APPLE_TEAM_ID && process.env.APP
       
       // Check if user exists with this Apple ID
       let user = db.prepare('SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?')
-        .get('apple', appleId);
+        .get('apple', String(appleId));
       
       if (!user) {
         // Check if email already exists (from regular signup or other OAuth)
-        user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+        user = db.prepare('SELECT * FROM users WHERE email = ?').get(String(email));
         
         if (user) {
           console.log('Linking existing account with Apple Sign-In:', user.email);
           // Link existing account with Apple - only update if not already linked to another provider
           if (!user.oauth_provider) {
             db.prepare('UPDATE users SET oauth_provider = ?, oauth_id = ? WHERE id = ?')
-              .run('apple', appleId, user.id);
+              .run('apple', String(appleId), user.id);
           } else {
             // User already has OAuth from another provider, just add Apple ID
             console.log('User already has OAuth provider:', user.oauth_provider);
@@ -164,9 +178,9 @@ if (process.env.APPLE_SERVICE_ID && process.env.APPLE_TEAM_ID && process.env.APP
             VALUES (?, ?, ?, ?, ?, ?)
           `).run(
             handle,
-            email,
+            String(email),
             'apple',
-            appleId,
+            String(appleId),
             `Apple user since ${new Date().getFullYear()}`,
             null  // OAuth users don't need password
           );
