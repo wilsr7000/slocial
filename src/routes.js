@@ -178,11 +178,25 @@ function buildRouter(db) {
 
   // Admin routes (hidden)
   router.get('/admin', requireAdmin, (req, res) => {
-    const letters = db.prepare(`
-      SELECT l.*, u.handle FROM letters l 
+    const filter = req.query.filter || 'all';
+    
+    // Get letters based on filter
+    let lettersQuery = `
+      SELECT l.*, u.handle, 
+        (SELECT COUNT(*) FROM comments WHERE letter_id = l.id) as comment_count,
+        (SELECT COUNT(*) FROM resonates WHERE letter_id = l.id) as resonate_count
+      FROM letters l 
       JOIN users u ON u.id = l.author_id 
-      ORDER BY l.created_at DESC LIMIT 50
-    `).all();
+    `;
+    
+    if (filter === 'pending') {
+      lettersQuery += ' WHERE l.is_published = 0 ';
+    } else if (filter === 'published') {
+      lettersQuery += ' WHERE l.is_published = 1 ';
+    }
+    
+    lettersQuery += ' ORDER BY l.created_at DESC LIMIT 50';
+    const letters = db.prepare(lettersQuery).all();
     
     const comments = db.prepare(`
       SELECT c.*, u.handle, l.title FROM comments c 
@@ -193,7 +207,15 @@ function buildRouter(db) {
     
     const users = db.prepare('SELECT id, handle, email, is_admin, created_at FROM users ORDER BY created_at DESC LIMIT 50').all();
     
-    res.render('admin', { user: req.session.user, letters, comments, users });
+    // Get stats
+    const stats = {
+      totalUsers: db.prepare('SELECT COUNT(*) as count FROM users').get().count,
+      totalLetters: db.prepare('SELECT COUNT(*) as count FROM letters').get().count,
+      pendingLetters: db.prepare('SELECT COUNT(*) as count FROM letters WHERE is_published = 0').get().count,
+      totalComments: db.prepare('SELECT COUNT(*) as count FROM comments').get().count
+    };
+    
+    res.render('admin', { user: req.session.user, letters, comments, users, stats, filter });
   });
 
   router.post('/admin/delete-letter/:id', requireAdmin, (req, res) => {
@@ -214,6 +236,29 @@ function buildRouter(db) {
     const id = Number(req.params.id);
     if (id === req.session.user.id) return res.redirect('/admin'); // Can't remove own admin
     db.prepare('UPDATE users SET is_admin = CASE WHEN is_admin = 1 THEN 0 ELSE 1 END WHERE id = ?').run(id);
+    res.redirect('/admin');
+  });
+
+  // Force publish a pending letter immediately
+  router.post('/admin/publish-now/:id', requireAdmin, (req, res) => {
+    const id = Number(req.params.id);
+    db.prepare('UPDATE letters SET is_published = 1, publish_at = datetime("now") WHERE id = ?').run(id);
+    res.redirect('/admin');
+  });
+
+  // Unpublish a letter (hide it)
+  router.post('/admin/unpublish/:id', requireAdmin, (req, res) => {
+    const id = Number(req.params.id);
+    db.prepare('UPDATE letters SET is_published = 0 WHERE id = ?').run(id);
+    res.redirect('/admin');
+  });
+
+  // Ban/suspend a user (soft delete - they can't login)
+  router.post('/admin/ban-user/:id', requireAdmin, (req, res) => {
+    const id = Number(req.params.id);
+    if (id === req.session.user.id) return res.redirect('/admin'); // Can't ban yourself
+    // Add random string to email to effectively ban them
+    db.prepare('UPDATE users SET email = email || "_banned_" || ? WHERE id = ?').run(Date.now(), id);
     res.redirect('/admin');
   });
 

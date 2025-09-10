@@ -3,12 +3,23 @@
   .admin-table{width:100%;border-collapse:collapse;font-size:13px}
   .admin-table th{text-align:left;padding:8px;border-bottom:2px solid var(--border)}
   .admin-table td{padding:8px;border-bottom:1px solid var(--border)}
-  .admin-actions{display:flex;gap:8px}
+  .admin-actions{display:flex;gap:8px;flex-wrap:wrap}
   .admin-actions form{margin:0}
   .admin-actions button{padding:4px 8px;font-size:12px}
   .danger{background:#ff4444;color:white;border-color:#ff4444}
   .danger:hover{background:#dd3333}
+  .success{background:#28a745;color:white;border-color:#28a745}
+  .success:hover{background:#218838}
+  .warning{background:#ffc107;color:#000;border-color:#ffc107}
+  .warning:hover{background:#e0a800}
   .admin-warning{background:#fff3cd;border:1px solid #ffc107;padding:12px;border-radius:8px;margin-bottom:16px}
+  .admin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:16px;margin:20px 0}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+  .stat-card h3{margin:0;font-size:14px;color:var(--muted)}
+  .stat-card p{margin:8px 0 0 0;font-size:24px;font-weight:bold}
+  .filter-tabs{display:flex;gap:8px;margin-bottom:12px}
+  .filter-tabs a{padding:6px 12px;border:1px solid var(--border);border-radius:6px;text-decoration:none}
+  .filter-tabs a.active{background:var(--fg);color:white}
 </style>
 
 <h1>Admin Dashboard</h1>
@@ -16,8 +27,32 @@
   <strong>⚠️ Admin Area</strong> - Actions here are permanent. Use with caution.
 </div>
 
+<section class="admin-stats">
+  <div class="stat-card">
+    <h3>Users</h3>
+    <p><%= stats.totalUsers %></p>
+  </div>
+  <div class="stat-card">
+    <h3>Letters</h3>
+    <p><%= stats.totalLetters %></p>
+  </div>
+  <div class="stat-card">
+    <h3>Pending</h3>
+    <p><%= stats.pendingLetters %></p>
+  </div>
+  <div class="stat-card">
+    <h3>Comments</h3>
+    <p><%= stats.totalComments %></p>
+  </div>
+</section>
+
 <section class="admin-section">
   <h2>Recent Letters</h2>
+  <div class="filter-tabs">
+    <a href="/admin" class="<%= filter === 'all' ? 'active' : '' %>">All</a>
+    <a href="/admin?filter=pending" class="<%= filter === 'pending' ? 'active' : '' %>">Pending</a>
+    <a href="/admin?filter=published" class="<%= filter === 'published' ? 'active' : '' %>">Published</a>
+  </div>
   <table class="admin-table">
     <thead>
       <tr>
@@ -38,6 +73,17 @@
           <td><%= letter.is_published ? 'Published' : 'Pending' %></td>
           <td><%= new Date(letter.created_at).toLocaleDateString() %></td>
           <td class="admin-actions">
+            <% if (!letter.is_published) { %>
+              <form action="/admin/publish-now/<%= letter.id %>" method="post">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                <button class="success">Publish Now</button>
+              </form>
+            <% } else { %>
+              <form action="/admin/unpublish/<%= letter.id %>" method="post">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                <button class="warning">Unpublish</button>
+              </form>
+            <% } %>
             <form action="/admin/delete-letter/<%= letter.id %>" method="post" onsubmit="return confirm('Delete this letter and all its comments?')">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
               <button class="danger">Delete</button>
@@ -109,6 +155,14 @@
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                 <button><%= u.is_admin ? 'Remove Admin' : 'Make Admin' %></button>
               </form>
+              <% if (!u.email.includes('_banned_')) { %>
+                <form action="/admin/ban-user/<%= u.id %>" method="post" onsubmit="return confirm('Ban this user? They will not be able to login.')">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                  <button class="danger">Ban</button>
+                </form>
+              <% } else { %>
+                <span style="color:red">BANNED</span>
+              <% } %>
             <% } %>
           </td>
         </tr>
