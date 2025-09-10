@@ -1,0 +1,118 @@
+<style>
+  .admin-section{margin:24px 0;padding:16px;background:var(--card);border:1px solid var(--border);border-radius:8px}
+  .admin-table{width:100%;border-collapse:collapse;font-size:13px}
+  .admin-table th{text-align:left;padding:8px;border-bottom:2px solid var(--border)}
+  .admin-table td{padding:8px;border-bottom:1px solid var(--border)}
+  .admin-actions{display:flex;gap:8px}
+  .admin-actions form{margin:0}
+  .admin-actions button{padding:4px 8px;font-size:12px}
+  .danger{background:#ff4444;color:white;border-color:#ff4444}
+  .danger:hover{background:#dd3333}
+  .admin-warning{background:#fff3cd;border:1px solid #ffc107;padding:12px;border-radius:8px;margin-bottom:16px}
+</style>
+
+<h1>Admin Dashboard</h1>
+<div class="admin-warning">
+  <strong>⚠️ Admin Area</strong> - Actions here are permanent. Use with caution.
+</div>
+
+<section class="admin-section">
+  <h2>Recent Letters</h2>
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Author</th>
+        <th>Title</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% letters.forEach(letter => { %>
+        <tr>
+          <td><%= letter.id %></td>
+          <td>@<%= letter.handle %></td>
+          <td><a href="/letters/<%= letter.id %>"><%= letter.title.slice(0, 50) %></a></td>
+          <td><%= letter.is_published ? 'Published' : 'Pending' %></td>
+          <td><%= new Date(letter.created_at).toLocaleDateString() %></td>
+          <td class="admin-actions">
+            <form action="/admin/delete-letter/<%= letter.id %>" method="post" onsubmit="return confirm('Delete this letter and all its comments?')">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <button class="danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</section>
+
+<section class="admin-section">
+  <h2>Recent Comments</h2>
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Author</th>
+        <th>Letter</th>
+        <th>Comment</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% comments.forEach(comment => { %>
+        <tr>
+          <td><%= comment.id %></td>
+          <td>@<%= comment.handle %></td>
+          <td><a href="/letters/<%= comment.letter_id %>"><%= comment.title.slice(0, 30) %></a></td>
+          <td><%= comment.body.slice(0, 50) %>...</td>
+          <td><%= new Date(comment.created_at).toLocaleDateString() %></td>
+          <td class="admin-actions">
+            <form action="/admin/delete-comment/<%= comment.id %>" method="post" onsubmit="return confirm('Delete this comment?')">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <button class="danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</section>
+
+<section class="admin-section">
+  <h2>Users</h2>
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Handle</th>
+        <th>Email</th>
+        <th>Admin</th>
+        <th>Joined</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% users.forEach(u => { %>
+        <tr>
+          <td><%= u.id %></td>
+          <td>@<%= u.handle %></td>
+          <td><%= u.email %></td>
+          <td><%= u.is_admin ? '✓ Admin' : '' %></td>
+          <td><%= new Date(u.created_at).toLocaleDateString() %></td>
+          <td class="admin-actions">
+            <% if (u.id !== user.id) { %>
+              <form action="/admin/toggle-admin/<%= u.id %>" method="post">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                <button><%= u.is_admin ? 'Remove Admin' : 'Make Admin' %></button>
+              </form>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</section>

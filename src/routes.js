@@ -11,6 +11,11 @@ function buildRouter(db) {
     next();
   }
 
+  function requireAdmin(req, res, next) {
+    if (!req.session.user || !req.session.user.is_admin) return res.status(404).send('Not found');
+    next();
+  }
+
   router.get('/', (req, res) => {
     const page = Math.max(1, parseInt(req.query.page || '1', 10));
     const pageSize = 10;
@@ -72,7 +77,7 @@ function buildRouter(db) {
       if (!user || !bcrypt.compareSync(password, user.password_hash)) {
         return res.status(401).render('login', { user: req.session.user, errors: [{ msg: 'Invalid credentials' }], values: req.body });
       }
-      req.session.user = { id: user.id, handle: user.handle, email: user.email };
+      req.session.user = { id: user.id, handle: user.handle, email: user.email, is_admin: user.is_admin === 1 };
       res.redirect('/');
     }
   );
@@ -159,6 +164,47 @@ function buildRouter(db) {
     const now = dayjs().toISOString();
     const info = db.prepare('UPDATE letters SET is_published = 1 WHERE is_published = 0 AND publish_at <= ?').run(now);
     res.json({ published: info.changes });
+  });
+
+  // Admin routes (hidden)
+  router.get('/admin', requireAdmin, (req, res) => {
+    const letters = db.prepare(`
+      SELECT l.*, u.handle FROM letters l 
+      JOIN users u ON u.id = l.author_id 
+      ORDER BY l.created_at DESC LIMIT 50
+    `).all();
+    
+    const comments = db.prepare(`
+      SELECT c.*, u.handle, l.title FROM comments c 
+      JOIN users u ON u.id = c.author_id 
+      JOIN letters l ON l.id = c.letter_id
+      ORDER BY c.created_at DESC LIMIT 50
+    `).all();
+    
+    const users = db.prepare('SELECT id, handle, email, is_admin, created_at FROM users ORDER BY created_at DESC LIMIT 50').all();
+    
+    res.render('admin', { user: req.session.user, letters, comments, users });
+  });
+
+  router.post('/admin/delete-letter/:id', requireAdmin, (req, res) => {
+    const id = Number(req.params.id);
+    db.prepare('DELETE FROM comments WHERE letter_id = ?').run(id);
+    db.prepare('DELETE FROM resonates WHERE letter_id = ?').run(id);
+    db.prepare('DELETE FROM letters WHERE id = ?').run(id);
+    res.redirect('/admin');
+  });
+
+  router.post('/admin/delete-comment/:id', requireAdmin, (req, res) => {
+    const id = Number(req.params.id);
+    db.prepare('DELETE FROM comments WHERE id = ?').run(id);
+    res.redirect('/admin');
+  });
+
+  router.post('/admin/toggle-admin/:id', requireAdmin, (req, res) => {
+    const id = Number(req.params.id);
+    if (id === req.session.user.id) return res.redirect('/admin'); // Can't remove own admin
+    db.prepare('UPDATE users SET is_admin = CASE WHEN is_admin = 1 THEN 0 ELSE 1 END WHERE id = ?').run(id);
+    res.redirect('/admin');
   });
 
   return router;
