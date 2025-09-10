@@ -31,10 +31,10 @@ function buildRouter(db) {
   });
 
   router.get('/about', (req, res) => {
-    res.send('<div class="container"><h1>About</h1><p>Slocial is slow social—letters that steep before they publish.</p></div>');
+    res.render('about', { user: req.session.user });
   });
   router.get('/principles', (req, res) => {
-    res.send('<div class="container"><h1>Principles</h1><ul><li>Patience</li><li>Clarity</li><li>Kindness</li></ul></div>');
+    res.render('principles', { user: req.session.user });
   });
 
   router.get('/signup', (req, res) => res.render('signup', { user: req.session.user, errors: [], values: {} }));
