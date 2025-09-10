@@ -1,28 +1,50 @@
 <style>
   .editor-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    height: 600px;
-    margin: 20px 0;
-  }
-  
-  .editor-pane, .preview-pane {
     border: 1px solid var(--border);
     border-radius: 12px;
     background: var(--card);
-    display: flex;
-    flex-direction: column;
     overflow: hidden;
+    margin: 20px 0;
   }
   
-  .pane-header {
-    padding: 12px 16px;
+  .editor-tabs {
+    display: flex;
     background: #fafaf8;
     border-bottom: 1px solid var(--border);
-    font-weight: 600;
+  }
+  
+  .editor-tab {
+    padding: 12px 24px;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--border);
+    cursor: pointer;
     font-size: 14px;
+    font-weight: 500;
     color: var(--muted);
+    transition: all 0.2s;
+  }
+  
+  .editor-tab:hover {
+    background: white;
+  }
+  
+  .editor-tab.active {
+    background: white;
+    color: var(--fg);
+    font-weight: 600;
+    border-bottom: 2px solid var(--fg);
+    margin-bottom: -1px;
+  }
+  
+  .tab-content {
+    display: none;
+    flex-direction: column;
+    height: 600px;
+  }
+  
+  .tab-content.active {
+    display: flex;
   }
   
   .editor-toolbar {
@@ -145,16 +167,64 @@
     color: var(--muted);
   }
   
+  .markdown-guide {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  
+  .markdown-guide h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+  }
+  
+  .markdown-guide h4 {
+    margin-top: 24px;
+    margin-bottom: 12px;
+  }
+  
+  .markdown-guide table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 24px;
+  }
+  
+  .markdown-guide th {
+    text-align: left;
+    padding: 12px;
+    background: #fafaf8;
+    border: 1px solid var(--border);
+    font-weight: 600;
+  }
+  
+  .markdown-guide td {
+    padding: 12px;
+    border: 1px solid var(--border);
+  }
+  
+  .markdown-guide code {
+    background: #f5f5f5;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+  }
+  
+  .markdown-guide ul {
+    margin: 0;
+    padding-left: 24px;
+  }
+  
+  .markdown-guide li {
+    margin: 8px 0;
+  }
+  
   @media (max-width: 768px) {
-    .editor-container {
-      grid-template-columns: 1fr;
-      height: auto;
+    .editor-tab {
+      padding: 10px 12px;
+      font-size: 13px;
     }
-    .editor-pane {
-      height: 400px;
-    }
-    .preview-pane {
-      height: 400px;
+    .tab-content {
+      height: 500px;
     }
   }
 </style>
@@ -175,8 +245,20 @@
   <input type="text" name="title" id="title-input" value="<%= values.title || '' %>" maxlength="120" required placeholder="A thoughtful title..." />
   
   <div class="editor-container">
-    <div class="editor-pane">
-      <div class="pane-header">✍️ Write (Markdown)</div>
+    <div class="editor-tabs">
+      <button type="button" class="editor-tab active" onclick="switchTab('write')">
+        ✍️ Write
+      </button>
+      <button type="button" class="editor-tab" onclick="switchTab('preview')">
+        👁 Preview
+      </button>
+      <button type="button" class="editor-tab" onclick="switchTab('guide')">
+        📖 Markdown Guide
+      </button>
+    </div>
+    
+    <!-- Write Tab -->
+    <div id="write-tab" class="tab-content active">
       <div class="editor-toolbar">
         <button type="button" class="toolbar-btn" onclick="insertMarkdown('**', '**')">Bold</button>
         <button type="button" class="toolbar-btn" onclick="insertMarkdown('*', '*')">Italic</button>
@@ -211,12 +293,78 @@ You can use:
       </div>
     </div>
     
-    <div class="preview-pane">
-      <div class="pane-header">👁 Preview</div>
+    <!-- Preview Tab -->
+    <div id="preview-tab" class="tab-content">
       <div class="preview-content" id="preview">
         <p style="color: var(--muted); text-align: center; margin-top: 100px;">
           Your formatted letter will appear here...
         </p>
+      </div>
+    </div>
+    
+    <!-- Guide Tab -->
+    <div id="guide-tab" class="tab-content">
+      <div class="markdown-guide">
+        <h3>Markdown Quick Reference</h3>
+        <table>
+          <tr>
+            <th>You Type</th>
+            <th>You Get</th>
+          </tr>
+          <tr>
+            <td><code>**bold text**</code></td>
+            <td><strong>bold text</strong></td>
+          </tr>
+          <tr>
+            <td><code>*italic text*</code></td>
+            <td><em>italic text</em></td>
+          </tr>
+          <tr>
+            <td><code># Heading 1</code></td>
+            <td><h4>Heading 1</h4></td>
+          </tr>
+          <tr>
+            <td><code>## Heading 2</code></td>
+            <td><h5>Heading 2</h5></td>
+          </tr>
+          <tr>
+            <td><code>[Link text](url)</code></td>
+            <td><a href="#">Link text</a></td>
+          </tr>
+          <tr>
+            <td><code>![Alt text](image-url)</code></td>
+            <td>🖼️ Image</td>
+          </tr>
+          <tr>
+            <td><code>> Quote</code></td>
+            <td><blockquote style="margin:0;padding-left:10px;border-left:3px solid #ccc;">Quote</blockquote></td>
+          </tr>
+          <tr>
+            <td><code>`inline code`</code></td>
+            <td><code style="background:#f5f5f5;padding:2px 4px;">inline code</code></td>
+          </tr>
+          <tr>
+            <td><code>- List item</code></td>
+            <td>• List item</td>
+          </tr>
+          <tr>
+            <td><code>1. Numbered item</code></td>
+            <td>1. Numbered item</td>
+          </tr>
+          <tr>
+            <td><code>---</code></td>
+            <td><hr style="margin:5px 0;"></td>
+          </tr>
+        </table>
+        
+        <h4>Tips:</h4>
+        <ul>
+          <li>Use <strong>Ctrl/Cmd + B</strong> for bold</li>
+          <li>Use <strong>Ctrl/Cmd + I</strong> for italic</li>
+          <li>Use <strong>Ctrl/Cmd + K</strong> for links</li>
+          <li>Click the image button to add images</li>
+          <li>Preview your letter before publishing</li>
+        </ul>
       </div>
     </div>
   </div>
@@ -322,6 +470,31 @@ You can use:
   
   // Initial preview
   updatePreview();
+  
+  // Tab switching
+  function switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.editor-tab').forEach(tab => {
+      tab.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => {
+      content.classList.remove('active');
+    });
+    document.getElementById(tabName + '-tab').classList.add('active');
+    
+    // Update preview when switching to preview tab
+    if (tabName === 'preview') {
+      updatePreview();
+    }
+    
+    // Focus editor when switching to write tab
+    if (tabName === 'write') {
+      editor.focus();
+    }
+  }
   
   // Keyboard shortcuts
   editor.addEventListener('keydown', (e) => {
