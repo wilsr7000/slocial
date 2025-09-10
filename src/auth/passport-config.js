@@ -80,6 +80,13 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
 // Apple Sign-In Strategy
 if (process.env.APPLE_SERVICE_ID && process.env.APPLE_TEAM_ID && process.env.APPLE_KEY_ID && process.env.APPLE_PRIVATE_KEY) {
+  console.log('Apple Sign-In configured with:');
+  console.log('- Service ID:', process.env.APPLE_SERVICE_ID);
+  console.log('- Team ID:', process.env.APPLE_TEAM_ID);
+  console.log('- Key ID:', process.env.APPLE_KEY_ID);
+  console.log('- Private Key:', process.env.APPLE_PRIVATE_KEY ? 'Present' : 'Missing');
+  console.log('- Callback URL:', process.env.APPLE_CALLBACK_URL || '/auth/apple/callback');
+  
   passport.use(new AppleStrategy({
     clientID: process.env.APPLE_SERVICE_ID,
     teamID: process.env.APPLE_TEAM_ID,
@@ -92,8 +99,16 @@ if (process.env.APPLE_SERVICE_ID && process.env.APPLE_TEAM_ID && process.env.APP
     const db = new Database(dbFile);
     
     try {
+      console.log('Apple Sign-In callback received');
+      console.log('ID Token:', idToken ? 'Present' : 'Missing');
+      
+      if (!idToken || !idToken.sub) {
+        console.error('Apple Sign-In: Invalid ID token');
+        return done(new Error('Invalid Apple ID token'));
+      }
+      
       // Apple provides limited info, use the ID token data
-      const email = idToken.email;
+      const email = idToken.email || `${idToken.sub}@privaterelay.appleid.com`;
       const appleId = idToken.sub;
       
       // Check if user exists with this Apple ID

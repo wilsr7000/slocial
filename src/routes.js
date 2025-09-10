@@ -185,8 +185,15 @@ function buildRouter(db) {
   );
 
   router.post('/auth/apple/callback',
-    passport.authenticate('apple', { failureRedirect: '/login' }),
-    (req, res) => {
+    passport.authenticate('apple', { 
+      failureRedirect: '/login',
+      failureFlash: false 
+    }),
+    (req, res, next) => {
+      if (!req.user) {
+        console.error('Apple OAuth: No user after authentication');
+        return res.status(500).send('Authentication failed - no user');
+      }
       // Set session user data
       req.session.user = {
         id: req.user.id,
