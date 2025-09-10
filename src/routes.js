@@ -49,9 +49,11 @@ function buildRouter(db) {
     const letters = db.prepare(`
       SELECT l.*, u.handle, u.bio, u.avatar_url,
         (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
-        EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate
+        EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
+        rs.status AS reading_status
       FROM letters l
       JOIN users u ON u.id = l.author_id
+      LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
       WHERE l.is_published = 1 AND l.publish_at <= @now
       ORDER BY l.publish_at DESC
       LIMIT @limit OFFSET @offset
@@ -277,6 +279,28 @@ function buildRouter(db) {
       FROM letters l JOIN users u ON u.id = l.author_id WHERE l.id = @id
     `).get({ id, uid });
     if (!letter) return res.status(404).send('Not found');
+    
+    // Mark as reading/read if user is logged in
+    if (req.session.user) {
+      try {
+        const now = dayjs().toISOString();
+        // Set status to 'reading' when they start reading
+        db.prepare(`
+          INSERT INTO reading_status (user_id, letter_id, status, started_at, created_at, updated_at)
+          VALUES (?, ?, 'reading', ?, ?, ?)
+          ON CONFLICT(user_id, letter_id) 
+          DO UPDATE SET 
+            status = CASE 
+              WHEN status IN ('skip', 'later') THEN 'reading'
+              ELSE status 
+            END,
+            started_at = COALESCE(started_at, ?),
+            updated_at = ?
+        `).run(uid, id, now, now, now, now, now);
+      } catch (error) {
+        console.error('Error updating reading status:', error);
+      }
+    }
 
     const comments = db.prepare(`
       SELECT c.*, u.handle FROM comments c JOIN users u ON u.id = c.author_id WHERE c.letter_id = ? ORDER BY c.created_at ASC
@@ -310,6 +334,44 @@ function buildRouter(db) {
     } catch {}
     res.redirect(`/letters/${id}`);
   });
+  router.post('/letters/:id/status', requireAuth, (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    const userId = req.session.user.id;
+    
+    try {
+      if (status === 'remove') {
+        // Remove the reading status
+        db.prepare('DELETE FROM reading_status WHERE user_id = ? AND letter_id = ?')
+          .run(userId, id);
+      } else if (['read', 'skip', 'later', 'reading'].includes(status)) {
+        // Update or insert reading status
+        const now = dayjs().toISOString();
+        db.prepare(`
+          INSERT INTO reading_status (user_id, letter_id, status, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?)
+          ON CONFLICT(user_id, letter_id) 
+          DO UPDATE SET status = ?, updated_at = ?
+        `).run(userId, id, status, now, now, status, now);
+        
+        // Track event
+        eventTracker.track('reading_status', {
+          userId,
+          sessionId: req.sessionID,
+          letterId: id,
+          metadata: { status }
+        });
+      } else {
+        return res.status(400).json({ success: false, error: 'Invalid status' });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating reading status:', error);
+      res.status(500).json({ success: false, error: 'Failed to update status' });
+    }
+  });
+  
   router.post('/letters/:id/unresonate', requireAuth, (req, res) => {
     const id = Number(req.params.id);
     db.prepare('DELETE FROM resonates WHERE letter_id = ? AND user_id = ?').run(id, req.session.user.id);

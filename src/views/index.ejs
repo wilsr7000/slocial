@@ -60,11 +60,39 @@
       
       <div class="actions">
         <% if (user) { %>
-          <% if (letter.did_resonate) { %>
-            <form action="/letters/<%= letter.id %>/unresonate" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>" /><button class="btn">Unresonate</button></form>
-          <% } else { %>
-            <form action="/letters/<%= letter.id %>/resonate" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>" /><button class="btn">Resonate</button></form>
-          <% } %>
+          <div class="reading-actions">
+            <% if (letter.reading_status === 'read') { %>
+              <button class="reading-btn read completed" disabled>
+                <span class="icon">✓</span> Read
+              </button>
+            <% } else if (letter.reading_status === 'skip') { %>
+              <button class="reading-btn skip completed" disabled>
+                <span class="icon">→</span> Skipped
+              </button>
+            <% } else if (letter.reading_status === 'later') { %>
+              <button class="reading-btn later active" onclick="updateReadingStatus(<%= letter.id %>, 'remove')">
+                <span class="icon">🔖</span> Saved
+              </button>
+            <% } else { %>
+              <button class="reading-btn read" onclick="window.location.href='/letters/<%= letter.id %>'">
+                <span class="icon">📖</span> Read
+              </button>
+              <button class="reading-btn skip" onclick="updateReadingStatus(<%= letter.id %>, 'skip')">
+                <span class="icon">→</span> Skip
+              </button>
+              <button class="reading-btn later" onclick="updateReadingStatus(<%= letter.id %>, 'later')">
+                <span class="icon">🔖</span> Later
+              </button>
+            <% } %>
+          </div>
+          
+          <div class="resonate-action">
+            <% if (letter.did_resonate) { %>
+              <form action="/letters/<%= letter.id %>/unresonate" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>" /><button class="btn resonate-btn active">Resonated</button></form>
+            <% } else { %>
+              <form action="/letters/<%= letter.id %>/resonate" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>" /><button class="btn resonate-btn">Resonate</button></form>
+            <% } %>
+          </div>
         <% } %>
       </div>
     </article>
@@ -77,5 +105,31 @@
     <a class="btn" href="/?page=<%= page + 1 %>">Next</a>
   </div>
 </section>
+
+<script>
+function updateReadingStatus(letterId, status) {
+  fetch(`/letters/${letterId}/status`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': '<%= csrfToken %>'
+    },
+    body: JSON.stringify({ status })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      // Reload to update UI
+      window.location.reload();
+    } else {
+      alert('Failed to update reading status');
+    }
+  })
+  .catch(err => {
+    console.error('Error:', err);
+    alert('Failed to update reading status');
+  });
+}
+</script>
 
 
