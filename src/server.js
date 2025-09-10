@@ -173,12 +173,26 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
-// CSRF error handler
+// Error handlers
 app.use((err, req, res, next) => {
+  // CSRF error
   if (err && err.code === 'EBADCSRFTOKEN') {
+    console.error('CSRF token error:', req.path);
     return res.status(403).send('Form has expired. Please go back and try again.');
   }
-  next(err);
+  
+  // Body size error
+  if (err && err.type === 'entity.too.large') {
+    console.error('Request body too large:', req.path);
+    return res.status(413).send('Request body too large. Please reduce the size of your content or images.');
+  }
+  
+  // General error logging
+  console.error('Server error:', err);
+  console.error('Stack:', err.stack);
+  
+  // Send error response
+  res.status(err.status || 500).send('Internal Server Error');
 });
 
 

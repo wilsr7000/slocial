@@ -515,6 +515,8 @@ function buildRouter(db) {
     body('title').isLength({ min: 1, max: 120 }),
     body('body').isLength({ min: 1, max: 500000 }), // Increased to allow multiple images
     (req, res) => {
+      console.log('POST /compose - Request received');
+      console.log('Body size:', JSON.stringify(req.body).length, 'bytes');
       const errors = validationResult(req);
       if (!errors.isEmpty()) return res.status(400).render('compose', { user: req.session.user, errors: errors.array(), values: req.body, pageClass: 'compose' });
 
