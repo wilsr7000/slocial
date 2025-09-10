@@ -708,19 +708,30 @@ function buildRouter(db) {
   router.get('/admin/events', requireAdmin, (req, res) => {
     const eventType = req.query.type || '';
     const period = req.query.period || '24h';
+    const view = req.query.view || 'sessions'; // Default to session view
     
     const filters = {};
     if (eventType) filters.eventType = eventType;
     
-    const events = eventTracker.getRecentEvents(200, filters);
+    let events = [];
+    let sessions = [];
+    
+    if (view === 'sessions') {
+      sessions = eventTracker.getSessionGroupedEvents(50, filters);
+    } else {
+      events = eventTracker.getRecentEvents(200, filters);
+    }
+    
     const analytics = eventTracker.getAnalytics(period);
     
     res.render('admin-events', { 
       user: req.session.user, 
       events, 
+      sessions,
       analytics, 
       selectedType: eventType,
-      selectedPeriod: period 
+      selectedPeriod: period,
+      selectedView: view
     });
   });
 

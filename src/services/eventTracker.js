@@ -1,5 +1,6 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const { getGeolocation, formatLocation } = require('../utils/geolocation');
 
 class EventTracker {
   constructor() {
@@ -23,15 +24,18 @@ class EventTracker {
       
       // Track active page views for duration calculation
       this.activeViews = new Map();
+      // Track session data
+      this.sessionData = new Map();
     } catch (error) {
       console.error('EventTracker initialization error:', error);
       this.db = null;
       this.insertStmt = null;
       this.activeViews = new Map();
+      this.sessionData = new Map();
     }
   }
 
-  track(eventType, data = {}) {
+  async track(eventType, data = {}) {
     try {
       if (!this.insertStmt) {
         // Silently skip if events table doesn't exist
@@ -50,6 +54,19 @@ class EventTracker {
         metadata = {}
       } = data;
 
+      // Track session start if this is the first event for this session
+      if (sessionId && !this.sessionData.has(sessionId)) {
+        await this.startSession(sessionId, ipAddress, userAgent);
+      }
+
+      // Add geolocation to metadata if we have an IP
+      if (ipAddress && sessionId) {
+        const sessionInfo = this.sessionData.get(sessionId);
+        if (sessionInfo && sessionInfo.location) {
+          metadata.location = sessionInfo.location;
+        }
+      }
+
       this.insertStmt.run(
         eventType,
         userId,
@@ -64,6 +81,41 @@ class EventTracker {
       );
     } catch (error) {
       console.error('Error tracking event:', error);
+    }
+  }
+
+  async startSession(sessionId, ipAddress, userAgent) {
+    try {
+      // Get geolocation for this IP
+      const geo = await getGeolocation(ipAddress);
+      const location = formatLocation(geo);
+      
+      // Store session data
+      this.sessionData.set(sessionId, {
+        startTime: Date.now(),
+        ipAddress,
+        userAgent,
+        location,
+        geo,
+        eventCount: 0,
+        pagesVisited: new Set()
+      });
+      
+      // Track session start event
+      this.insertStmt.run(
+        'session_start',
+        null,
+        sessionId,
+        ipAddress,
+        userAgent,
+        null,
+        null,
+        null,
+        null,
+        JSON.stringify({ location, geo })
+      );
+    } catch (error) {
+      console.error('Error starting session:', error);
     }
   }
 
@@ -150,6 +202,103 @@ class EventTracker {
       }));
     } catch (error) {
       console.error('Error getting recent events:', error);
+      return [];
+    }
+  }
+
+  // Get events grouped by session
+  getSessionGroupedEvents(limit = 50, filters = {}) {
+    if (!this.db) {
+      return [];
+    }
+    
+    try {
+      // First get recent sessions
+      let sessionQuery = `
+        SELECT DISTINCT session_id, 
+               MIN(created_at) as session_start,
+               MAX(created_at) as session_end,
+               COUNT(*) as event_count,
+               MAX(user_id) as user_id,
+               MAX(ip_address) as ip_address,
+               MAX(user_agent) as user_agent
+        FROM events
+        WHERE session_id IS NOT NULL
+      `;
+      
+      const sessionParams = [];
+      
+      if (filters.startDate) {
+        sessionQuery += ' AND created_at >= ?';
+        sessionParams.push(filters.startDate);
+      }
+      
+      sessionQuery += ' GROUP BY session_id ORDER BY session_start DESC LIMIT ?';
+      sessionParams.push(limit);
+      
+      const sessions = this.db.prepare(sessionQuery).all(...sessionParams);
+      
+      // For each session, get its events
+      const sessionData = sessions.map(session => {
+        const events = this.db.prepare(`
+          SELECT e.*, u.handle as user_handle
+          FROM events e
+          LEFT JOIN users u ON e.user_id = u.id
+          WHERE e.session_id = ?
+          ORDER BY e.created_at ASC
+        `).all(session.session_id);
+        
+        // Parse metadata and extract location from first session_start event
+        let location = 'Unknown';
+        let geo = null;
+        const parsedEvents = events.map(event => {
+          const parsed = {
+            ...event,
+            metadata: event.metadata ? JSON.parse(event.metadata) : {}
+          };
+          
+          // Extract location from session_start event
+          if (event.event_type === 'session_start' && parsed.metadata.location) {
+            location = parsed.metadata.location;
+            geo = parsed.metadata.geo;
+          }
+          
+          return parsed;
+        });
+        
+        // Calculate session duration
+        const durationMs = new Date(session.session_end) - new Date(session.session_start);
+        
+        // Get unique pages visited
+        const pagesVisited = [...new Set(events
+          .filter(e => e.event_type === 'page_view' && e.path)
+          .map(e => e.path))];
+        
+        // Get user info
+        const userEvent = events.find(e => e.user_id);
+        const userName = userEvent ? userEvent.user_handle : 'Anonymous';
+        const userId = userEvent ? userEvent.user_id : null;
+        
+        return {
+          sessionId: session.session_id,
+          startTime: session.session_start,
+          endTime: session.session_end,
+          duration: durationMs,
+          eventCount: session.event_count,
+          userId,
+          userName,
+          ipAddress: session.ip_address,
+          userAgent: session.user_agent,
+          location,
+          geo,
+          pagesVisited,
+          events: parsedEvents
+        };
+      });
+      
+      return sessionData;
+    } catch (error) {
+      console.error('Error getting session grouped events:', error);
       return [];
     }
   }

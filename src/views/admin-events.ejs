@@ -36,6 +36,7 @@
     gap: 10px;
     margin-bottom: 20px;
     flex-wrap: wrap;
+    align-items: center;
   }
   
   .filter-select {
@@ -43,6 +44,32 @@
     border: 1px solid var(--border);
     border-radius: 4px;
     background: white;
+  }
+  
+  .view-toggle {
+    display: inline-flex;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .view-toggle button {
+    padding: 8px 16px;
+    border: none;
+    background: white;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+  
+  .view-toggle button:not(:last-child) {
+    border-right: 1px solid var(--border);
+  }
+  
+  .view-toggle button.active {
+    background: var(--fg);
+    color: white;
   }
   
   .events-table {
@@ -87,6 +114,135 @@
   .event-type.reading_status { background: #fed7aa; color: #92400e; }
   .event-type.comment { background: #f5c6cb; color: #721c24; }
   .event-type.resonate { background: #c3e6cb; color: #155724; }
+  .event-type.session_start { background: #e3f2fd; color: #1565c0; }
+  .event-type.draft_publish { background: #d4edda; color: #155724; }
+  
+  /* Session view styles */
+  .session-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  
+  .session-header {
+    padding: 16px 20px;
+    background: #f8f9fa;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  
+  .session-header:hover {
+    background: #e9ecef;
+  }
+  
+  .session-header.expanded {
+    background: #e3f2fd;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .session-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  
+  .session-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .session-user {
+    font-weight: 600;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .session-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--muted);
+    flex-wrap: wrap;
+  }
+  
+  .session-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .session-stats {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+  
+  .session-stat {
+    text-align: center;
+  }
+  
+  .session-stat-value {
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--fg);
+  }
+  
+  .session-stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  
+  .session-details {
+    display: none;
+    padding: 20px;
+    background: white;
+  }
+  
+  .session-details.expanded {
+    display: block;
+  }
+  
+  .session-events {
+    margin-top: 16px;
+  }
+  
+  .session-event {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .session-event:last-child {
+    border-bottom: none;
+  }
+  
+  .session-event-time {
+    font-size: 12px;
+    color: var(--muted);
+    min-width: 60px;
+  }
+  
+  .session-event-content {
+    flex: 1;
+  }
+  
+  .expand-icon {
+    transition: transform 0.2s;
+  }
+  
+  .session-header.expanded .expand-icon {
+    transform: rotate(180deg);
+  }
   
   .metadata {
     font-size: 11px;
@@ -98,7 +254,8 @@
   }
   
   .duration {
-    font-weight: 600;
+    font-size: 12px;
+    color: var(--muted);
   }
   
   .top-pages {
@@ -106,87 +263,76 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 20px;
-    margin-top: 20px;
+    margin-bottom: 30px;
   }
   
   .page-list {
     list-style: none;
     padding: 0;
+    margin: 10px 0 0 0;
   }
   
   .page-list li {
-    padding: 8px 0;
-    border-bottom: 1px solid #eee;
     display: flex;
     justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
   }
   
-  .admin-nav {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 20px;
-    border-bottom: 2px solid var(--border);
-    padding-bottom: 10px;
-  }
-  
-  .admin-nav a {
-    color: var(--muted);
-    text-decoration: none;
-    font-weight: 600;
-  }
-  
-  .admin-nav a.active {
-    color: var(--accent);
+  .page-list li:last-child {
+    border-bottom: none;
   }
 </style>
 
 <div class="events-container">
-  <h1>Event Log & Analytics</h1>
-  
-  <div class="admin-nav">
-    <a href="/admin">Dashboard</a>
-    <a href="/admin/events" class="active">Events</a>
-  </div>
+  <h1>📊 Event Analytics</h1>
   
   <!-- Analytics Summary -->
   <div class="analytics-grid">
     <div class="stat-card">
-      <div class="stat-value"><%= analytics.totalEvents %></div>
+      <div class="stat-value"><%= analytics.totalEvents.toLocaleString() %></div>
       <div class="stat-label">Total Events</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value"><%= analytics.uniqueVisitors %></div>
+      <div class="stat-value"><%= analytics.uniqueVisitors.toLocaleString() %></div>
       <div class="stat-label">Unique Sessions</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value"><%= analytics.webRequests || 0 %></div>
-      <div class="stat-label">Web Requests</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value"><%= analytics.pageViews %></div>
+      <div class="stat-value"><%= analytics.pageViews.toLocaleString() %></div>
       <div class="stat-label">Page Views</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value"><%= analytics.newVisitors || 0 %></div>
+      <div class="stat-value"><%= analytics.webRequests.toLocaleString() %></div>
+      <div class="stat-label">Web Requests</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value"><%= analytics.newVisitors.toLocaleString() %></div>
       <div class="stat-label">New Visitors</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value"><%= analytics.logins %></div>
+      <div class="stat-value"><%= analytics.logins.toLocaleString() %></div>
       <div class="stat-label">Logins</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value"><%= Math.round(analytics.avgReadingTime / 1000) %>s</div>
+      <div class="stat-value">
+        <% if (analytics.avgReadingTime) { %>
+          <%= Math.round(analytics.avgReadingTime / 1000) %>s
+        <% } else { %>
+          -
+        <% } %>
+      </div>
       <div class="stat-label">Avg Reading Time</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value"><%= analytics.pageViews && analytics.uniqueVisitors ? (analytics.pageViews / analytics.uniqueVisitors).toFixed(1) : 0 %></div>
-      <div class="stat-label">Pages/Session</div>
     </div>
   </div>
   
   <!-- Filters -->
   <div class="filters">
-    <form method="get" style="display: flex; gap: 10px;">
+    <form method="get" action="/admin/events" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+      <div class="view-toggle">
+        <button type="submit" name="view" value="sessions" class="<%= typeof selectedView !== 'undefined' && selectedView === 'sessions' ? 'active' : '' %>">Sessions</button>
+        <button type="submit" name="view" value="events" class="<%= typeof selectedView !== 'undefined' && selectedView === 'events' ? 'active' : '' %>">All Events</button>
+      </div>
+      
       <select name="period" class="filter-select" onchange="this.form.submit()">
         <option value="1h" <%= selectedPeriod === '1h' ? 'selected' : '' %>>Last Hour</option>
         <option value="24h" <%= selectedPeriod === '24h' ? 'selected' : '' %>>Last 24 Hours</option>
@@ -194,10 +340,11 @@
         <option value="30d" <%= selectedPeriod === '30d' ? 'selected' : '' %>>Last 30 Days</option>
       </select>
       
+      <% if (typeof selectedView === 'undefined' || selectedView === 'events') { %>
       <select name="type" class="filter-select" onchange="this.form.submit()">
         <option value="">All Events</option>
-        <option value="web_request" <%= selectedType === 'web_request' ? 'selected' : '' %>>Web Requests</option>
         <option value="page_view" <%= selectedType === 'page_view' ? 'selected' : '' %>>Page Views</option>
+        <option value="session_start" <%= selectedType === 'session_start' ? 'selected' : '' %>>Session Starts</option>
         <option value="new_visitor" <%= selectedType === 'new_visitor' ? 'selected' : '' %>>New Visitors</option>
         <option value="login" <%= selectedType === 'login' ? 'selected' : '' %>>Logins</option>
         <option value="logout" <%= selectedType === 'logout' ? 'selected' : '' %>>Logouts</option>
@@ -205,9 +352,16 @@
         <option value="letter_create" <%= selectedType === 'letter_create' ? 'selected' : '' %>>Letters Created</option>
         <option value="letter_read_start" <%= selectedType === 'letter_read_start' ? 'selected' : '' %>>Started Reading</option>
         <option value="reading_status" <%= selectedType === 'reading_status' ? 'selected' : '' %>>Read/Skip/Later</option>
+        <option value="draft_publish" <%= selectedType === 'draft_publish' ? 'selected' : '' %>>Drafts Published</option>
         <option value="comment" <%= selectedType === 'comment' ? 'selected' : '' %>>Comments</option>
         <option value="resonate" <%= selectedType === 'resonate' ? 'selected' : '' %>>Resonates</option>
       </select>
+      <% } %>
+      
+      <!-- Keep existing hidden inputs for view state -->
+      <% if (typeof selectedView !== 'undefined') { %>
+        <input type="hidden" name="view" value="<%= selectedView %>">
+      <% } %>
     </form>
   </div>
   
@@ -226,74 +380,210 @@
   </div>
   <% } %>
   
-  <!-- Events Table -->
-  <h2>Recent Events</h2>
-  <table class="events-table">
-    <thead>
-      <tr>
-        <th>Time</th>
-        <th>Event</th>
-        <th>User</th>
-        <th>Path</th>
-        <th>Duration</th>
-        <th>IP</th>
-        <th>Details</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% events.forEach(event => { %>
-        <tr>
-          <td><%= new Date(event.created_at).toLocaleString() %></td>
-          <td><span class="event-type <%= event.event_type %>"><%= event.event_type %></span></td>
-          <td>
-            <% if (event.user_handle) { %>
-              @<%= event.user_handle %>
-            <% } else if (event.session_id) { %>
-              <span style="color: var(--muted)">visitor</span>
-            <% } else { %>
-              -
-            <% } %>
-          </td>
-          <td><%= event.path || '-' %></td>
-          <td>
-            <% if (event.duration_ms) { %>
-              <span class="duration"><%= (event.duration_ms / 1000).toFixed(1) %>s</span>
-            <% } else { %>
-              -
-            <% } %>
-          </td>
-          <td><%= event.ip_address || '-' %></td>
-          <td>
-            <% if (event.metadata && Object.keys(event.metadata).length > 0) { %>
-              <span class="metadata" title="<%= JSON.stringify(event.metadata) %>">
-                <% if (event.event_type === 'reading_status' && event.metadata.status) { %>
-                  <% if (event.metadata.status === 'skip') { %>
-                    <span style="color: #64748b;">→ Skipped</span>
-                  <% } else if (event.metadata.status === 'later') { %>
-                    <span style="color: #f59e0b;">🔖 Saved for Later</span>
-                  <% } else if (event.metadata.status === 'read') { %>
-                    <span style="color: #22c55e;">✓ Marked as Read</span>
-                  <% } else if (event.metadata.status === 'reading') { %>
-                    <span style="color: #3b82f6;">📖 Started Reading</span>
+  <% if (typeof selectedView !== 'undefined' && selectedView === 'sessions' && typeof sessions !== 'undefined') { %>
+    <!-- Session View -->
+    <h2>Recent Sessions</h2>
+    <% if (sessions.length === 0) { %>
+      <p style="text-align: center; padding: 40px; color: var(--muted);">No sessions found for this period.</p>
+    <% } else { %>
+      <% 
+      function formatDuration(ms) {
+        if (!ms || ms < 1000) return '< 1s';
+        const seconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        
+        if (hours > 0) {
+          return `${hours}h ${minutes % 60}m`;
+        } else if (minutes > 0) {
+          return `${minutes}m ${seconds % 60}s`;
+        } else {
+          return `${seconds}s`;
+        }
+      }
+      %>
+      
+      <% sessions.forEach((session, index) => { %>
+        <div class="session-card">
+          <div class="session-header" onclick="toggleSession('<%= index %>')" id="session-header-<%= index %>">
+            <div class="session-summary">
+              <div class="session-info">
+                <div class="session-user">
+                  <% if (session.userId) { %>
+                    <span>👤 <%= session.userName %></span>
                   <% } else { %>
-                    <%= event.metadata.status %>
+                    <span>👻 Anonymous Visitor</span>
                   <% } %>
-                <% } else if (event.event_type === 'letter_read_start' && event.metadata.letterTitle) { %>
-                  📖 <%= event.metadata.letterTitle.slice(0, 30) %><% if (event.metadata.letterTitle.length > 30) { %>...<% } %>
-                <% } else { %>
-                  <%= JSON.stringify(event.metadata) %>
-                <% } %>
-              </span>
-            <% } else { %>
-              -
+                  <span class="expand-icon">▼</span>
+                </div>
+                <div class="session-meta">
+                  <div class="session-meta-item">
+                    📍 <%= session.location || 'Unknown Location' %>
+                  </div>
+                  <div class="session-meta-item">
+                    🕐 <%= new Date(session.startTime).toLocaleString() %>
+                  </div>
+                  <div class="session-meta-item">
+                    ⏱️ <%= formatDuration(session.duration) %>
+                  </div>
+                  <div class="session-meta-item" title="<%= session.ipAddress %>">
+                    🌐 <%= session.ipAddress ? session.ipAddress.slice(0, 15) : 'Unknown IP' %>
+                  </div>
+                </div>
+              </div>
+              <div class="session-stats">
+                <div class="session-stat">
+                  <div class="session-stat-value"><%= session.eventCount %></div>
+                  <div class="session-stat-label">Events</div>
+                </div>
+                <div class="session-stat">
+                  <div class="session-stat-value"><%= session.pagesVisited.length %></div>
+                  <div class="session-stat-label">Pages</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="session-details" id="session-details-<%= index %>">
+            <% if (session.pagesVisited.length > 0) { %>
+              <div style="margin-bottom: 16px;">
+                <strong>Pages Visited:</strong>
+                <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;">
+                  <% session.pagesVisited.forEach(page => { %>
+                    <span style="background: #f0f0f0; padding: 4px 8px; border-radius: 4px; font-size: 12px;"><%= page %></span>
+                  <% }) %>
+                </div>
+              </div>
             <% } %>
-          </td>
-        </tr>
+            
+            <div class="session-events">
+              <strong>Activity Timeline:</strong>
+              <div style="margin-top: 12px;">
+                <% session.events.forEach(event => { %>
+                  <div class="session-event">
+                    <div class="session-event-time">
+                      <%= new Date(event.created_at).toLocaleTimeString() %>
+                    </div>
+                    <div class="session-event-content">
+                      <span class="event-type <%= event.event_type %>"><%= event.event_type.replace(/_/g, ' ') %></span>
+                      <% if (event.path) { %>
+                        <span style="margin-left: 8px; color: var(--muted); font-size: 12px;"><%= event.path %></span>
+                      <% } %>
+                      <% if (event.metadata && Object.keys(event.metadata).length > 0) { %>
+                        <div style="margin-top: 4px; font-size: 11px; color: var(--muted);">
+                          <% if (event.metadata.letterTitle) { %>
+                            📄 <%= event.metadata.letterTitle.slice(0, 50) %>
+                          <% } else if (event.metadata.status) { %>
+                            Status: <%= event.metadata.status %>
+                          <% } else if (event.metadata.referrer) { %>
+                            From: <%= event.metadata.referrer %>
+                          <% } else if (event.metadata.location) { %>
+                            📍 <%= event.metadata.location %>
+                          <% } %>
+                        </div>
+                      <% } %>
+                      <% if (event.duration_ms) { %>
+                        <span style="margin-left: 8px; color: var(--muted); font-size: 11px;">⏱️ <%= formatDuration(event.duration_ms) %></span>
+                      <% } %>
+                    </div>
+                  </div>
+                <% }) %>
+              </div>
+            </div>
+          </div>
+        </div>
       <% }) %>
-    </tbody>
-  </table>
-  
-  <% if (events.length === 0) { %>
-    <p style="text-align: center; padding: 40px; color: var(--muted);">No events found for the selected filters.</p>
+    <% } %>
+    
+    <script>
+      function toggleSession(index) {
+        const header = document.getElementById('session-header-' + index);
+        const details = document.getElementById('session-details-' + index);
+        header.classList.toggle('expanded');
+        details.classList.toggle('expanded');
+      }
+    </script>
+  <% } else { %>
+    <!-- Traditional Event View -->
+    <h2>Recent Events</h2>
+    <table class="events-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Event</th>
+          <th>User</th>
+          <th>Path</th>
+          <th>Duration</th>
+          <th>IP</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% events.forEach(event => { %>
+          <tr>
+            <td><%= new Date(event.created_at).toLocaleString() %></td>
+            <td><span class="event-type <%= event.event_type %>"><%= event.event_type %></span></td>
+            <td>
+              <% if (event.user_handle) { %>
+                @<%= event.user_handle %>
+              <% } else { %>
+                <span style="color: var(--muted);">Anonymous</span>
+              <% } %>
+            </td>
+            <td>
+              <% if (event.path) { %>
+                <span style="font-size: 12px;"><%= event.path %></span>
+              <% } else { %>
+                -
+              <% } %>
+            </td>
+            <td>
+              <% if (event.duration_ms) { %>
+                <span class="duration"><%= Math.round(event.duration_ms / 1000) %>s</span>
+              <% } else { %>
+                -
+              <% } %>
+            </td>
+            <td>
+              <% if (event.ip_address) { %>
+                <span style="font-size: 11px;"><%= event.ip_address %></span>
+              <% } else { %>
+                -
+              <% } %>
+            </td>
+            <td>
+              <% if (event.metadata && Object.keys(event.metadata).length > 0) { %>
+                <span class="metadata" title="<%= JSON.stringify(event.metadata) %>">
+                  <% if (event.event_type === 'reading_status' && event.metadata.status) { %>
+                    <% if (event.metadata.status === 'skip') { %>
+                      <span style="color: #64748b;">→ Skipped</span>
+                    <% } else if (event.metadata.status === 'later') { %>
+                      <span style="color: #f59e0b;">🔖 Saved for Later</span>
+                    <% } else if (event.metadata.status === 'read') { %>
+                      <span style="color: #22c55e;">✓ Marked as Read</span>
+                    <% } else if (event.metadata.status === 'reading') { %>
+                      <span style="color: #3b82f6;">📖 Started Reading</span>
+                    <% } else { %>
+                      <%= event.metadata.status %>
+                    <% } %>
+                  <% } else if (event.event_type === 'letter_read_start' && event.metadata.letterTitle) { %>
+                    📖 <%= event.metadata.letterTitle.slice(0, 30) %><% if (event.metadata.letterTitle.length > 30) { %>...<% } %>
+                  <% } else if (event.metadata.location) { %>
+                    📍 <%= event.metadata.location %>
+                  <% } else { %>
+                    <%= JSON.stringify(event.metadata) %>
+                  <% } %>
+                </span>
+              <% } else { %>
+                -
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    
+    <% if (events.length === 0) { %>
+      <p style="text-align: center; padding: 40px; color: var(--muted);">No events found for the selected filters.</p>
+    <% } %>
   <% } %>
 </div>
