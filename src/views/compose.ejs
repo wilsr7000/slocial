@@ -383,9 +383,9 @@ You can use:
     <h3 style="margin-top:0;">Add Image</h3>
     
     <div style="margin:16px 0;">
-      <label style="display:block; margin-bottom:8px; font-weight:600;">Option 1: Image URL</label>
+      <label style="display:block; margin-bottom:8px; font-weight:600;">Option 1: Image URL <span style="color:#22c55e; font-size:11px; font-weight:normal;">(RECOMMENDED)</span></label>
       <input type="url" id="image-url" placeholder="https://example.com/image.jpg" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px;">
-      <p style="font-size:12px; color:var(--muted); margin:4px 0;">Paste a direct link to an image</p>
+      <p style="font-size:12px; color:var(--muted); margin:4px 0;">Best option - links to external image, no size limit</p>
     </div>
     
     <div style="margin:16px 0;">
@@ -393,9 +393,10 @@ You can use:
     </div>
     
     <div style="margin:16px 0;">
-      <label style="display:block; margin-bottom:8px; font-weight:600;">Option 2: Upload Image</label>
+      <label style="display:block; margin-bottom:8px; font-weight:600;">Option 2: Upload Image <span style="color:#f59e0b; font-size:11px; font-weight:normal;">(SMALL IMAGES ONLY)</span></label>
       <input type="file" id="image-file" accept="image/*" style="width:100%;">
-      <p style="font-size:12px; color:var(--muted); margin:4px 0;">Max 2MB. JPG, PNG, GIF, WebP</p>
+      <p style="font-size:12px; color:var(--muted); margin:4px 0;">⚠️ Max 100KB - embeds as text, making letter very long</p>
+      <p style="font-size:11px; color:#f59e0b; margin:4px 0;"><strong>Note:</strong> Large images will appear as walls of text. Use URLs for images over 50KB.</p>
     </div>
     
     <div style="margin:16px 0;">
@@ -545,10 +546,30 @@ You can use:
   document.getElementById('image-file').addEventListener('change', function() {
     const file = this.files[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert('Image must be less than 2MB');
+      // Much stricter limit for base64 embedded images
+      const maxSize = 100 * 1024; // 100KB
+      if (file.size > maxSize) {
+        const sizeKB = Math.round(file.size / 1024);
+        alert(`Image is ${sizeKB}KB - too large for embedding!\n\n` +
+              `For best results:\n` +
+              `• Use images under 100KB for direct upload\n` +
+              `• Or use an image URL instead (recommended)\n` +
+              `• Try image hosting: Imgur, Cloudinary, etc.\n\n` +
+              `Large embedded images make your letter text very long.`);
         this.value = '';
+        document.getElementById('image-preview').style.display = 'none';
         return;
+      }
+      
+      // Warn about base64 encoding
+      if (file.size > 50 * 1024) { // Warn if over 50KB
+        const sizeKB = Math.round(file.size / 1024);
+        if (!confirm(`This ${sizeKB}KB image will be embedded as text in your letter.\n\n` +
+                     `This will add ~${Math.round(sizeKB * 1.37)}KB of text to your letter.\n\n` +
+                     `Continue? (Using an image URL is recommended instead)`)) {
+          this.value = '';
+          return;
+        }
       }
       
       const reader = new FileReader();
