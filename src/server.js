@@ -33,15 +33,40 @@ app.use(passport.session());
 
 const db = initializeDatabase();
 
-// Run migrations and setup
-const { execSync } = require('child_process');
+// Run inline migration to add draft columns
+console.log('Checking database schema...');
 try {
-  execSync('node src/db/migrate-add-draft-columns.js', { stdio: 'inherit' });
+  const columns = db.prepare("PRAGMA table_info(letters)").all();
+  const hasIsDraft = columns.some(col => col.name === 'is_draft');
+  const hasLastSavedAt = columns.some(col => col.name === 'last_saved_at');
+  
+  if (!hasIsDraft) {
+    console.log('Adding is_draft column to letters table...');
+    db.prepare('ALTER TABLE letters ADD COLUMN is_draft INTEGER NOT NULL DEFAULT 0').run();
+    console.log('✓ is_draft column added');
+  }
+  
+  if (!hasLastSavedAt) {
+    console.log('Adding last_saved_at column to letters table...');
+    db.prepare('ALTER TABLE letters ADD COLUMN last_saved_at TEXT').run();
+    console.log('✓ last_saved_at column added');
+  }
+  
+  // Create index for drafts if it doesn't exist
+  try {
+    db.prepare('CREATE INDEX idx_letters_drafts ON letters(author_id, is_draft, created_at DESC)').run();
+    console.log('✓ Draft index created');
+  } catch (e) {
+    // Index might already exist, that's ok
+  }
+  
+  console.log('Database schema check complete');
 } catch (e) {
   console.error('Migration error:', e);
 }
 
 // Auto-create default admin on first run
+const { execSync } = require('child_process');
 try {
   const adminExists = db.prepare('SELECT id FROM users WHERE email = ?').get('robb@onereach.com');
   if (!adminExists) {
