@@ -523,26 +523,36 @@ function buildRouter(db) {
       
       if (action === 'draft') {
         // Save as draft
-        const info = db.prepare(`
-          INSERT INTO letters (author_id, title, body, is_draft, publish_at, last_saved_at, created_at, is_published) 
-          VALUES (?, ?, ?, 1, ?, ?, ?, 0)
-        `).run(
-          req.session.user.id, 
-          title, 
-          body, 
-          now.add(12, 'hour').toISOString(), // Default publish time
-          now.toISOString(),
-          now.toISOString()
-        );
+        try {
+          const info = db.prepare(`
+            INSERT INTO letters (author_id, title, body, is_draft, publish_at, last_saved_at, created_at, is_published) 
+            VALUES (?, ?, ?, 1, ?, ?, ?, 0)
+          `).run(
+            req.session.user.id, 
+            title, 
+            body, 
+            now.add(12, 'hour').toISOString(), // Default publish time
+            now.toISOString(),
+            now.toISOString()
+          );
         
-        eventTracker.track('draft_save', {
-          userId: req.session.user.id,
-          sessionId: req.sessionID,
-          letterId: info.lastInsertRowid,
-          metadata: { title: title.slice(0, 50) }
-        });
-        
-        return res.redirect(`/drafts?saved=${info.lastInsertRowid}`);
+          eventTracker.track('draft_save', {
+            userId: req.session.user.id,
+            sessionId: req.sessionID,
+            letterId: info.lastInsertRowid,
+            metadata: { title: title.slice(0, 50) }
+          });
+          
+          return res.redirect(`/drafts?saved=${info.lastInsertRowid}`);
+        } catch (error) {
+          console.error('Error saving draft:', error);
+          return res.status(500).render('compose', { 
+            user: req.session.user, 
+            errors: [{ msg: 'Failed to save draft. Please try again.' }], 
+            values: req.body, 
+            pageClass: 'compose' 
+          });
+        }
       } else {
         // Publish (queue for publishing)
         // Enforce 1 letter per 24h (drafts don't count)
@@ -552,18 +562,28 @@ function buildRouter(db) {
           return res.status(429).render('compose', { user: req.session.user, errors: [{ msg: 'You can only publish once every 24 hours.' }], values: req.body, pageClass: 'compose' });
         }
 
-        const publish_at = dayjs().add(12, 'hour').toISOString();
-        const now = dayjs().toISOString();
-        const info = db.prepare('INSERT INTO letters (author_id, title, body, publish_at, created_at, is_published, is_draft) VALUES (?, ?, ?, ?, ?, 0, 0)')
-          .run(req.session.user.id, title, body, publish_at, now);
-        
-        eventTracker.track('letter_create', {
-          userId: req.session.user.id,
-          sessionId: req.sessionID,
-          letterId: info.lastInsertRowid,
-          metadata: { title: title.slice(0, 50), wordCount: body.split(/\s+/).length }
-        });
-        res.redirect(`/letters/${info.lastInsertRowid}`);
+        try {
+          const publish_at = dayjs().add(12, 'hour').toISOString();
+          const now = dayjs().toISOString();
+          const info = db.prepare('INSERT INTO letters (author_id, title, body, publish_at, created_at, is_published, is_draft) VALUES (?, ?, ?, ?, ?, 0, 0)')
+            .run(req.session.user.id, title, body, publish_at, now);
+          
+          eventTracker.track('letter_create', {
+            userId: req.session.user.id,
+            sessionId: req.sessionID,
+            letterId: info.lastInsertRowid,
+            metadata: { title: title.slice(0, 50), wordCount: body.split(/\s+/).length }
+          });
+          res.redirect(`/letters/${info.lastInsertRowid}`);
+        } catch (error) {
+          console.error('Error publishing letter:', error);
+          return res.status(500).render('compose', { 
+            user: req.session.user, 
+            errors: [{ msg: 'Failed to publish letter. Please try again.' }], 
+            values: req.body, 
+            pageClass: 'compose' 
+          });
+        }
       }
     }
   );
