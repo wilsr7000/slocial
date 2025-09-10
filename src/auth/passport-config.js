@@ -54,15 +54,16 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           const displayName = profile.displayName || profile.name?.givenName || email.split('@')[0];
           const handle = displayName.toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 1000);
           const info = db.prepare(`
-            INSERT INTO users (handle, email, oauth_provider, oauth_id, avatar_url, bio)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO users (handle, email, oauth_provider, oauth_id, avatar_url, bio, password_hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
           `).run(
             handle,
             email,
             'google',
             profile.id,
             profile.photos?.[0]?.value || null,
-            `Google user since ${new Date().getFullYear()}`
+            `Google user since ${new Date().getFullYear()}`,
+            null  // OAuth users don't need password
           );
           
           user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
@@ -111,6 +112,8 @@ if (process.env.APPLE_SERVICE_ID && process.env.APPLE_TEAM_ID && process.env.APP
       const email = idToken.email || `${idToken.sub}@privaterelay.appleid.com`;
       const appleId = idToken.sub;
       
+      console.log('Apple Sign-In data:', { email, appleId });
+      
       // Check if user exists with this Apple ID
       let user = db.prepare('SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?')
         .get('apple', appleId);
@@ -125,16 +128,18 @@ if (process.env.APPLE_SERVICE_ID && process.env.APPLE_TEAM_ID && process.env.APP
             .run('apple', appleId, user.id);
         } else {
           // Create new user
-          const handle = (email.split('@')[0] + Math.floor(Math.random() * 1000)).toLowerCase().replace(/[^a-z0-9]/g, '');
+          const emailPrefix = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') || 'user';
+          const handle = emailPrefix + Math.floor(Math.random() * 1000);
           const info = db.prepare(`
-            INSERT INTO users (handle, email, oauth_provider, oauth_id, bio)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO users (handle, email, oauth_provider, oauth_id, bio, password_hash)
+            VALUES (?, ?, ?, ?, ?, ?)
           `).run(
             handle,
             email,
             'apple',
             appleId,
-            `Apple user since ${new Date().getFullYear()}`
+            `Apple user since ${new Date().getFullYear()}`,
+            null  // OAuth users don't need password
           );
           
           user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
