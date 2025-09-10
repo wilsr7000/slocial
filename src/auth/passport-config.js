@@ -29,6 +29,13 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     const db = new Database(dbFile);
     
     try {
+      console.log('Google OAuth Profile:', JSON.stringify({
+        id: profile.id,
+        displayName: profile.displayName,
+        emails: profile.emails,
+        photos: profile.photos?.length
+      }));
+      
       // Check if user exists with this Google ID
       let user = db.prepare('SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?')
         .get('google', profile.id);
@@ -43,16 +50,18 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             .run('google', profile.id, profile.photos[0]?.value, user.id);
         } else {
           // Create new user
-          const handle = profile.displayName.toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 1000);
+          const email = profile.emails[0].value;
+          const displayName = profile.displayName || profile.name?.givenName || email.split('@')[0];
+          const handle = displayName.toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 1000);
           const info = db.prepare(`
             INSERT INTO users (handle, email, oauth_provider, oauth_id, avatar_url, bio)
             VALUES (?, ?, ?, ?, ?, ?)
           `).run(
             handle,
-            profile.emails[0].value,
+            email,
             'google',
             profile.id,
-            profile.photos[0]?.value,
+            profile.photos?.[0]?.value || null,
             `Google user since ${new Date().getFullYear()}`
           );
           

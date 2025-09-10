@@ -150,8 +150,15 @@ function buildRouter(db) {
   );
 
   router.get('/auth/google/callback',
-    passport.authenticate('google', { failureRedirect: '/login' }),
-    (req, res) => {
+    passport.authenticate('google', { 
+      failureRedirect: '/login',
+      failureFlash: false 
+    }),
+    (req, res, next) => {
+      if (!req.user) {
+        console.error('Google OAuth: No user after authentication');
+        return res.status(500).send('Authentication failed - no user');
+      }
       // Set session user data
       req.session.user = {
         id: req.user.id,
