@@ -66,7 +66,7 @@ function buildRouter(db) {
       const password_hash = bcrypt.hashSync(password, 12);
       try {
         const info = db.prepare('INSERT INTO users (handle, email, password_hash) VALUES (?, ?, ?)').run(handle, email, password_hash);
-        req.session.user = { id: info.lastInsertRowid, handle, email };
+        req.session.user = { id: info.lastInsertRowid, handle, email, is_admin: false };
         res.redirect('/');
       } catch (e) {
         const msg = /UNIQUE/.test(e.message) ? 'Handle or email already taken' : 'Signup failed';

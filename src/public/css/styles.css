@@ -12,6 +12,8 @@ a:hover{text-decoration:underline}
 .nav-left .member-count{font-size:11px;color:var(--muted);opacity:0.8;display:none}
 .nav-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .nav a{margin-left:8px}
+.nav .admin-link{color:#d9534f;font-weight:600;border:1px solid #d9534f;padding:2px 8px;border-radius:4px}
+.nav .admin-link:hover{background:#d9534f;color:white;text-decoration:none}
 .nav .handle{margin-left:4px;color:var(--muted);font-size:14px}
 .nav button{font-size:14px;padding:6px 10px}
 @media (min-width:640px){
