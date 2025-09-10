@@ -36,6 +36,7 @@ function initializeDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_letters_publish ON letters(is_published, publish_at DESC);
     CREATE INDEX IF NOT EXISTS idx_letters_author ON letters(author_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_letters_drafts ON letters(author_id, is_draft, created_at DESC);
 
     CREATE TABLE IF NOT EXISTS comments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -33,8 +33,15 @@ app.use(passport.session());
 
 const db = initializeDatabase();
 
-// Auto-create default admin on first run
+// Run migrations and setup
 const { execSync } = require('child_process');
+try {
+  execSync('node src/db/migrate-add-draft-columns.js', { stdio: 'inherit' });
+} catch (e) {
+  console.error('Migration error:', e);
+}
+
+// Auto-create default admin on first run
 try {
   const adminExists = db.prepare('SELECT id FROM users WHERE email = ?').get('robb@onereach.com');
   if (!adminExists) {
