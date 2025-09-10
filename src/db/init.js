@@ -26,6 +26,8 @@ function initializeDatabase() {
       author_id INTEGER NOT NULL,
       title TEXT NOT NULL,
       body TEXT NOT NULL,
+      is_draft INTEGER NOT NULL DEFAULT 0,
+      last_saved_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       publish_at TEXT NOT NULL,
       is_published INTEGER NOT NULL DEFAULT 0,

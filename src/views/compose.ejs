@@ -397,10 +397,23 @@ You can use:
     </div>
   </div>
   
-  <button type="submit" class="btn btn-primary" style="font-size: 16px; padding: 12px 24px;">
-    Queue Letter for Publishing
-  </button>
+  <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 20px;">
+    <button type="submit" name="action" value="publish" class="btn btn-primary" style="font-size: 16px; padding: 12px 24px; background: var(--fg); color: white; border: none;">
+      📮 Queue for Publishing
+    </button>
+    <button type="submit" name="action" value="draft" class="btn" style="font-size: 16px; padding: 12px 24px; background: #f3f4f6; color: var(--fg); border: 1px solid var(--border);">
+      💾 Save as Draft
+    </button>
+    <% if (typeof draft !== 'undefined' && draft) { %>
+      <span style="color: #22c55e; font-size: 14px; margin-left: auto;">
+        ✓ Draft saved <%= draft.last_saved_at ? new Date(draft.last_saved_at).toLocaleTimeString() : '' %>
+      </span>
+    <% } %>
+  </div>
   
+  <p class="hint" style="margin-top: 16px;">
+    <strong>💾 Drafts:</strong> Save your work and come back to it. Perfect for thoughtful writing over multiple days.
+  </p>
   <p class="hint">💡 Letters publish after a 12-hour steep. This gives you time to reflect, but not to obsess.</p>
   <p class="hint">📝 Markdown tips: Use **bold** for emphasis, > for quotes, and --- for dividers.</p>
 </form>

@@ -243,6 +243,84 @@ function buildRouter(db) {
   router.get('/compose', requireAuth, (req, res) => {
     res.render('compose', { user: req.session.user, errors: [], values: {} });
   });
+  
+  // Drafts routes
+  router.get('/drafts', requireAuth, (req, res) => {
+    const drafts = db.prepare(`
+      SELECT * FROM letters 
+      WHERE author_id = ? AND is_draft = 1 
+      ORDER BY last_saved_at DESC, created_at DESC
+    `).all(req.session.user.id);
+    
+    const saved = req.query.saved;
+    res.render('drafts', { 
+      user: req.session.user, 
+      drafts, 
+      saved: !!saved 
+    });
+  });
+  
+  router.get('/compose/draft/:id', requireAuth, (req, res) => {
+    const draft = db.prepare('SELECT * FROM letters WHERE id = ? AND author_id = ? AND is_draft = 1')
+      .get(req.params.id, req.session.user.id);
+    
+    if (!draft) {
+      return res.status(404).send('Draft not found');
+    }
+    
+    res.render('compose', { 
+      user: req.session.user, 
+      errors: [], 
+      values: draft,
+      draft
+    });
+  });
+  
+  router.post('/compose/draft/:id', requireAuth,
+    body('title').isLength({ min: 1, max: 120 }),
+    body('body').isLength({ min: 1, max: 50000 }),
+    (req, res) => {
+      const { title, body, action } = req.body;
+      const draftId = req.params.id;
+      const now = dayjs();
+      
+      // Verify ownership
+      const draft = db.prepare('SELECT * FROM letters WHERE id = ? AND author_id = ? AND is_draft = 1')
+        .get(draftId, req.session.user.id);
+      
+      if (!draft) {
+        return res.status(404).send('Draft not found');
+      }
+      
+      if (action === 'draft') {
+        // Update draft
+        db.prepare(`
+          UPDATE letters 
+          SET title = ?, body = ?, last_saved_at = ?
+          WHERE id = ?
+        `).run(title, body, now.toISOString(), draftId);
+        
+        return res.redirect(`/compose/draft/${draftId}?saved=true`);
+      } else {
+        // Convert to published letter
+        const publish_at = now.add(12, 'hour').toISOString();
+        db.prepare(`
+          UPDATE letters 
+          SET title = ?, body = ?, is_draft = 0, publish_at = ?, last_saved_at = NULL
+          WHERE id = ?
+        `).run(title, body, publish_at, draftId);
+        
+        eventTracker.track('draft_publish', {
+          userId: req.session.user.id,
+          sessionId: req.sessionID,
+          letterId: draftId,
+          metadata: { title: title.slice(0, 50) }
+        });
+        
+        return res.redirect(`/letters/${draftId}`);
+      }
+    }
+  );
   router.post('/compose', requireAuth,
     body('title').isLength({ min: 1, max: 120 }),
     body('body').isLength({ min: 1, max: 50000 }), // Increased to allow images
@@ -250,22 +328,51 @@ function buildRouter(db) {
       const errors = validationResult(req);
       if (!errors.isEmpty()) return res.status(400).render('compose', { user: req.session.user, errors: errors.array(), values: req.body });
 
-      // Enforce 1 letter per 24h
-      const last = db.prepare('SELECT created_at FROM letters WHERE author_id = ? ORDER BY created_at DESC LIMIT 1').get(req.session.user.id);
-      if (last && dayjs(last.created_at).isAfter(dayjs().subtract(24, 'hour'))) {
-        return res.status(429).render('compose', { user: req.session.user, errors: [{ msg: 'You can only post once every 24 hours.' }], values: req.body });
-      }
+      const { title, body, action } = req.body;
+      const now = dayjs();
+      
+      if (action === 'draft') {
+        // Save as draft
+        const info = db.prepare(`
+          INSERT INTO letters (author_id, title, body, is_draft, publish_at, last_saved_at, is_published) 
+          VALUES (?, ?, ?, 1, ?, ?, 0)
+        `).run(
+          req.session.user.id, 
+          title, 
+          body, 
+          now.add(12, 'hour').toISOString(), // Default publish time
+          now.toISOString()
+        );
+        
+        eventTracker.track('draft_save', {
+          userId: req.session.user.id,
+          sessionId: req.sessionID,
+          letterId: info.lastInsertRowid,
+          metadata: { title: title.slice(0, 50) }
+        });
+        
+        return res.redirect(`/drafts?saved=${info.lastInsertRowid}`);
+      } else {
+        // Publish (queue for publishing)
+        // Enforce 1 letter per 24h (drafts don't count)
+        const last = db.prepare('SELECT created_at FROM letters WHERE author_id = ? AND is_draft = 0 ORDER BY created_at DESC LIMIT 1')
+          .get(req.session.user.id);
+        if (last && dayjs(last.created_at).isAfter(dayjs().subtract(24, 'hour'))) {
+          return res.status(429).render('compose', { user: req.session.user, errors: [{ msg: 'You can only publish once every 24 hours.' }], values: req.body });
+        }
 
-      const publish_at = dayjs().add(12, 'hour').toISOString();
-      const info = db.prepare('INSERT INTO letters (author_id, title, body, publish_at, is_published) VALUES (?, ?, ?, ?, 0)')
-        .run(req.session.user.id, req.body.title, req.body.body, publish_at);
-      eventTracker.track('letter_create', {
-        userId: req.session.user.id,
-        sessionId: req.sessionID,
-        letterId: info.lastInsertRowid,
-        metadata: { title: req.body.title, wordCount: req.body.body.split(/\s+/).length }
-      });
-      res.redirect(`/letters/${info.lastInsertRowid}`);
+        const publish_at = dayjs().add(12, 'hour').toISOString();
+        const info = db.prepare('INSERT INTO letters (author_id, title, body, publish_at, is_published, is_draft) VALUES (?, ?, ?, ?, 0, 0)')
+          .run(req.session.user.id, req.body.title, req.body.body, publish_at);
+        
+        eventTracker.track('letter_create', {
+          userId: req.session.user.id,
+          sessionId: req.sessionID,
+          letterId: info.lastInsertRowid,
+          metadata: { title: req.body.title, wordCount: req.body.body.split(/\s+/).length }
+        });
+        res.redirect(`/letters/${info.lastInsertRowid}`);
+      }
     }
   );
 

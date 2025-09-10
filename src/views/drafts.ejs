@@ -1,0 +1,148 @@
+<style>
+  .drafts-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  .draft-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .draft-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .draft-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--fg);
+  }
+  
+  .draft-meta {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  
+  .draft-excerpt {
+    font-size: 15px;
+    line-height: 1.5;
+    color: #4b5563;
+    margin-bottom: 16px;
+  }
+  
+  .draft-actions {
+    display: flex;
+    gap: 12px;
+  }
+  
+  .draft-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 1px solid var(--border);
+    background: white;
+    color: var(--fg);
+    cursor: pointer;
+  }
+  
+  .draft-btn:hover {
+    background: var(--fg);
+    color: white;
+  }
+  
+  .draft-btn.delete {
+    color: #dc2626;
+    border-color: #dc2626;
+  }
+  
+  .draft-btn.delete:hover {
+    background: #dc2626;
+    color: white;
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  
+  .empty-state h2 {
+    font-size: 24px;
+    margin-bottom: 12px;
+  }
+  
+  .success-message {
+    background: #dcfce7;
+    border: 1px solid #22c55e;
+    color: #166534;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+</style>
+
+<div class="drafts-container">
+  <h1>My Drafts</h1>
+  
+  <% if (saved) { %>
+    <div class="success-message">
+      ✓ Draft saved successfully!
+    </div>
+  <% } %>
+  
+  <% if (drafts && drafts.length > 0) { %>
+    <% drafts.forEach(draft => { %>
+      <div class="draft-card">
+        <h2 class="draft-title"><%= draft.title %></h2>
+        <div class="draft-meta">
+          Last saved: <%= new Date(draft.last_saved_at || draft.created_at).toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            hour: 'numeric', 
+            minute: '2-digit' 
+          }) %>
+          • <%= draft.body.split(/\s+/).length %> words
+        </div>
+        <div class="draft-excerpt">
+          <%= draft.body.slice(0, 200) %><% if (draft.body.length > 200) { %>...<% } %>
+        </div>
+        <div class="draft-actions">
+          <a href="/compose/draft/<%= draft.id %>" class="draft-btn">
+            ✏️ Continue Writing
+          </a>
+          <form action="/drafts/<%= draft.id %>/publish" method="post" style="display: inline;">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <button type="submit" class="draft-btn">
+              📮 Publish Now
+            </button>
+          </form>
+          <form action="/drafts/<%= draft.id %>/delete" method="post" style="display: inline;">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <button type="submit" class="draft-btn delete" onclick="return confirm('Delete this draft?')">
+              🗑️ Delete
+            </button>
+          </form>
+        </div>
+      </div>
+    <% }) %>
+  <% } else { %>
+    <div class="empty-state">
+      <h2>No drafts yet</h2>
+      <p>Start writing and save as draft to see them here.</p>
+      <a href="/compose" class="btn" style="margin-top: 20px; display: inline-block;">
+        ✍️ Start Writing
+      </a>
+    </div>
+  <% } %>
+</div>
