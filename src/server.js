@@ -135,10 +135,21 @@ app.use((req, res, next) => {
   next();
 });
 
-// CSRF protection
-app.use(csrf());
+// CSRF protection with Apple Sign-In exception
+const csrfProtection = csrf();
 app.use((req, res, next) => {
-  res.locals.csrfToken = req.csrfToken();
+  // Skip CSRF for Apple Sign-In callback (uses POST)
+  if (req.path === '/auth/apple/callback') {
+    return next();
+  }
+  csrfProtection(req, res, next);
+});
+app.use((req, res, next) => {
+  if (req.path === '/auth/apple/callback') {
+    res.locals.csrfToken = '';
+  } else {
+    res.locals.csrfToken = req.csrfToken ? req.csrfToken() : '';
+  }
   next();
 });
 
