@@ -185,6 +185,7 @@
         <button type="button" class="toolbar-btn" onclick="insertMarkdown('> ', '')">Quote</button>
         <button type="button" class="toolbar-btn" onclick="insertMarkdown('`', '`')">Code</button>
         <button type="button" class="toolbar-btn" onclick="insertMarkdown('[', '](url)')">Link</button>
+        <button type="button" class="toolbar-btn" onclick="insertImage()">📷 Image</button>
         <div class="toolbar-separator"></div>
         <button type="button" class="toolbar-btn" onclick="insertMarkdown('- ', '')">List</button>
         <button type="button" class="toolbar-btn" onclick="insertMarkdown('1. ', '')">Number</button>
@@ -193,7 +194,7 @@
       <textarea 
         name="body" 
         id="markdown-editor" 
-        maxlength="5000" 
+        maxlength="50000" 
         required 
         placeholder="Write your letter here...
 
@@ -206,7 +207,7 @@ You can use:
 - Lists and more..."
       ><%= values.body || '' %></textarea>
       <div class="char-count">
-        <span id="char-count">0</span> / 5000 characters
+        <span id="char-count">0</span> / 50000 characters
       </div>
     </div>
     
@@ -228,6 +229,44 @@ You can use:
   <p class="hint">📝 Markdown tips: Use **bold** for emphasis, > for quotes, and --- for dividers.</p>
 </form>
 
+<!-- Image Upload Modal -->
+<div id="image-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:white; border-radius:12px; padding:24px; max-width:500px; width:90%; max-height:80vh; overflow-y:auto;">
+    <h3 style="margin-top:0;">Add Image</h3>
+    
+    <div style="margin:16px 0;">
+      <label style="display:block; margin-bottom:8px; font-weight:600;">Option 1: Image URL</label>
+      <input type="url" id="image-url" placeholder="https://example.com/image.jpg" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px;">
+      <p style="font-size:12px; color:var(--muted); margin:4px 0;">Paste a direct link to an image</p>
+    </div>
+    
+    <div style="margin:16px 0;">
+      <div style="text-align:center; color:var(--muted); margin:16px 0;">— OR —</div>
+    </div>
+    
+    <div style="margin:16px 0;">
+      <label style="display:block; margin-bottom:8px; font-weight:600;">Option 2: Upload Image</label>
+      <input type="file" id="image-file" accept="image/*" style="width:100%;">
+      <p style="font-size:12px; color:var(--muted); margin:4px 0;">Max 2MB. JPG, PNG, GIF, WebP</p>
+    </div>
+    
+    <div style="margin:16px 0;">
+      <label style="display:block; margin-bottom:8px;">Alt Text (optional)</label>
+      <input type="text" id="image-alt" placeholder="Description of the image" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px;">
+    </div>
+    
+    <div id="image-preview" style="margin:16px 0; display:none;">
+      <label style="display:block; margin-bottom:8px;">Preview:</label>
+      <img id="preview-img" style="max-width:100%; border-radius:8px; border:1px solid var(--border);">
+    </div>
+    
+    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:20px;">
+      <button type="button" onclick="closeImageModal()" style="padding:8px 16px; border:1px solid var(--border); border-radius:6px; background:white;">Cancel</button>
+      <button type="button" onclick="insertImageToEditor()" style="padding:8px 16px; border:1px solid var(--border); border-radius:6px; background:var(--fg); color:white;">Insert Image</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 <script>
@@ -248,7 +287,11 @@ You can use:
     const markdown = editor.value;
     if (markdown.trim()) {
       const html = marked.parse(markdown);
-      const clean = DOMPurify.sanitize(html);
+      // Allow data URLs for embedded images in preview
+      const clean = DOMPurify.sanitize(html, {
+        ADD_DATA_URI_TAGS: ['img'],
+        ADD_ATTR: ['target']
+      });
       preview.innerHTML = clean;
     } else {
       preview.innerHTML = '<p style="color: var(--muted); text-align: center; margin-top: 100px;">Your formatted letter will appear here...</p>';
@@ -297,6 +340,100 @@ You can use:
           insertMarkdown('[', '](url)');
           break;
       }
+    }
+  });
+  
+  // Image handling
+  function insertImage() {
+    document.getElementById('image-modal').style.display = 'flex';
+    document.getElementById('image-url').value = '';
+    document.getElementById('image-alt').value = '';
+    document.getElementById('image-file').value = '';
+    document.getElementById('image-preview').style.display = 'none';
+  }
+  
+  function closeImageModal() {
+    document.getElementById('image-modal').style.display = 'none';
+  }
+  
+  // Preview image from URL
+  document.getElementById('image-url').addEventListener('input', function() {
+    const url = this.value;
+    if (url) {
+      document.getElementById('preview-img').src = url;
+      document.getElementById('image-preview').style.display = 'block';
+      document.getElementById('image-file').value = ''; // Clear file input
+    } else {
+      document.getElementById('image-preview').style.display = 'none';
+    }
+  });
+  
+  // Preview image from file upload
+  document.getElementById('image-file').addEventListener('change', function() {
+    const file = this.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Image must be less than 2MB');
+        this.value = '';
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('preview-img').src = e.target.result;
+        document.getElementById('image-preview').style.display = 'block';
+        document.getElementById('image-url').value = ''; // Clear URL input
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+  
+  function insertImageToEditor() {
+    const urlInput = document.getElementById('image-url').value;
+    const fileInput = document.getElementById('image-file').files[0];
+    const altText = document.getElementById('image-alt').value || 'Image';
+    
+    if (urlInput) {
+      // Insert URL image
+      const markdown = `![${altText}](${urlInput})`;
+      insertAtCursor(markdown);
+      closeImageModal();
+    } else if (fileInput) {
+      // Insert base64 image
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const markdown = `![${altText}](${e.target.result})`;
+        insertAtCursor(markdown);
+        closeImageModal();
+      };
+      reader.readAsDataURL(fileInput);
+    } else {
+      alert('Please provide an image URL or select a file');
+    }
+  }
+  
+  function insertAtCursor(text) {
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const value = editor.value;
+    
+    editor.value = value.substring(0, start) + text + value.substring(end);
+    editor.focus();
+    editor.setSelectionRange(start + text.length, start + text.length);
+    updatePreview();
+  }
+  
+  // Close modal on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeImageModal();
+    }
+  });
+  
+  // Close modal on background click
+  document.getElementById('image-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      closeImageModal();
     }
   });
 </script>

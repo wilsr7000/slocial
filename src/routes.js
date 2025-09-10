@@ -32,7 +32,11 @@ function buildRouter(db) {
 
   function renderMarkdown(text) {
     const html = marked.parse(text);
-    return DOMPurify.sanitize(html);
+    // Allow data URLs for embedded images
+    return DOMPurify.sanitize(html, {
+      ADD_DATA_URI_TAGS: ['img'],
+      ADD_ATTR: ['target']
+    });
   }
 
   router.get('/', (req, res) => {
@@ -120,7 +124,7 @@ function buildRouter(db) {
   });
   router.post('/compose', requireAuth,
     body('title').isLength({ min: 1, max: 120 }),
-    body('body').isLength({ min: 1, max: 5000 }),
+    body('body').isLength({ min: 1, max: 50000 }), // Increased to allow images
     (req, res) => {
       const errors = validationResult(req);
       if (!errors.isEmpty()) return res.status(400).render('compose', { user: req.session.user, errors: errors.array(), values: req.body });
