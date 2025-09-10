@@ -46,7 +46,7 @@ function buildRouter(db) {
     const offset = (page - 1) * pageSize;
     const now = dayjs().toISOString();
     const letters = db.prepare(`
-      SELECT l.*, u.handle,
+      SELECT l.*, u.handle, u.bio, u.avatar_url,
         (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
         EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate
       FROM letters l

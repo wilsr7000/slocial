@@ -38,8 +38,26 @@
   <% letters.forEach(letter => { %>
     <article class="letter">
       <h2><a href="/letters/<%= letter.id %>"><%= letter.title %></a></h2>
-      <div class="meta">by @<%= letter.handle %> · <%= new Date(letter.publish_at).toLocaleString() %></div>
+      <div class="meta"><%= new Date(letter.publish_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></div>
       <p><%= letter.body.slice(0, 260) %><% if (letter.body.length > 260) { %>…<% } %></p>
+      
+      <!-- Author section -->
+      <div class="feed-author">
+        <div class="feed-author-avatar">
+          <% if (letter.avatar_url) { %>
+            <img src="<%= letter.avatar_url %>" alt="<%= letter.handle %>" onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\"font-size:16px\">👤</span>';">
+          <% } else { %>
+            <span style="font-size: 16px;">👤</span>
+          <% } %>
+        </div>
+        <div class="feed-author-info">
+          <div class="feed-author-name">@<%= letter.handle %></div>
+          <% if (letter.bio) { %>
+            <div class="feed-author-bio"><%= letter.bio.slice(0, 100) %><% if (letter.bio.length > 100) { %>…<% } %></div>
+          <% } %>
+        </div>
+      </div>
+      
       <div class="actions">
         <% if (user) { %>
           <% if (letter.did_resonate) { %>
