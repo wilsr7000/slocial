@@ -2,6 +2,20 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const { body, validationResult } = require('express-validator');
 const dayjs = require('dayjs');
+const { marked } = require('marked');
+const createDOMPurify = require('dompurify');
+const { JSDOM } = require('jsdom');
+
+const window = new JSDOM('').window;
+const DOMPurify = createDOMPurify(window);
+
+// Configure marked
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+  headerIds: false,
+  mangle: false
+});
 
 function buildRouter(db) {
   const router = express.Router();
@@ -14,6 +28,11 @@ function buildRouter(db) {
   function requireAdmin(req, res, next) {
     if (!req.session.user || !req.session.user.is_admin) return res.status(404).send('Not found');
     next();
+  }
+
+  function renderMarkdown(text) {
+    const html = marked.parse(text);
+    return DOMPurify.sanitize(html);
   }
 
   router.get('/', (req, res) => {
@@ -137,6 +156,14 @@ function buildRouter(db) {
     const can_view = letter.is_published === 1 && dayjs(letter.publish_at).isBefore(dayjs());
     const is_author = uid === letter.author_id;
     if (!can_view && !is_author) return res.status(403).send('Not yet published');
+
+    // Render markdown for letter body
+    letter.body_html = renderMarkdown(letter.body);
+    
+    // Render markdown for comments
+    comments.forEach(comment => {
+      comment.body_html = renderMarkdown(comment.body);
+    });
 
     res.render('letter', { user: req.session.user, letter, comments });
   });

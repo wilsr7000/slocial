@@ -1,18 +1,302 @@
- 
-<h1>Compose a letter</h1>
-<p>Your letter will publish in 12 hours. You can write one every 24 hours.</p>
+<style>
+  .editor-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    height: 600px;
+    margin: 20px 0;
+  }
+  
+  .editor-pane, .preview-pane {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  
+  .pane-header {
+    padding: 12px 16px;
+    background: #fafaf8;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  
+  .editor-toolbar {
+    display: flex;
+    gap: 4px;
+    padding: 8px;
+    background: #fafaf8;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  
+  .toolbar-btn {
+    padding: 6px 10px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+  
+  .toolbar-btn:hover {
+    background: var(--fg);
+    color: white;
+  }
+  
+  .toolbar-separator {
+    width: 1px;
+    background: var(--border);
+    margin: 0 4px;
+  }
+  
+  #markdown-editor {
+    flex: 1;
+    padding: 16px;
+    border: none;
+    resize: none;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    background: white;
+  }
+  
+  #markdown-editor:focus {
+    outline: none;
+  }
+  
+  .preview-content {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  
+  /* Markdown preview styles */
+  .preview-content h1 { font-size: 28px; margin: 20px 0 16px 0; }
+  .preview-content h2 { font-size: 24px; margin: 18px 0 14px 0; }
+  .preview-content h3 { font-size: 20px; margin: 16px 0 12px 0; }
+  .preview-content p { margin: 12px 0; line-height: 1.6; }
+  .preview-content ul, .preview-content ol { margin: 12px 0; padding-left: 24px; }
+  .preview-content li { margin: 6px 0; }
+  .preview-content blockquote {
+    border-left: 4px solid var(--border);
+    padding-left: 16px;
+    margin: 16px 0;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .preview-content code {
+    background: #f5f5f5;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+  }
+  .preview-content pre {
+    background: #f5f5f5;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+  .preview-content pre code {
+    background: none;
+    padding: 0;
+  }
+  .preview-content a {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+  .preview-content hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 24px 0;
+  }
+  .preview-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+  .preview-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+  }
+  .preview-content th, .preview-content td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+  }
+  .preview-content th {
+    background: #fafaf8;
+    font-weight: 600;
+  }
+  
+  .char-count {
+    padding: 8px 16px;
+    background: #fafaf8;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  
+  @media (max-width: 768px) {
+    .editor-container {
+      grid-template-columns: 1fr;
+      height: auto;
+    }
+    .editor-pane {
+      height: 400px;
+    }
+    .preview-pane {
+      height: 400px;
+    }
+  }
+</style>
+
+<h1>Compose a Letter</h1>
+<p class="hint">Write in Markdown. Your letter will publish in 12 hours. You can write one every 24 hours.</p>
+
 <% if (errors && errors.length) { %>
   <ul class="errors">
     <% errors.forEach(e => { %><li><%= e.msg %></li><% }) %>
   </ul>
 <% } %>
-<form method="post">
+
+<form method="post" id="compose-form">
   <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-  <label>Title <input type="text" name="title" value="<%= values.title || '' %>" maxlength="120" required /></label>
-  <label>Body <textarea name="body" rows="12" maxlength="5000" required><%= values.body || '' %></textarea></label>
-  <button type="submit">Queue letter</button>
-  <p class="hint">Letters publish after a 12-hour steep. Slow media, not social media.</p>
-  <p class="hint">No edits after publishing. Be thoughtful.</p>
+  
+  <label>Title</label>
+  <input type="text" name="title" id="title-input" value="<%= values.title || '' %>" maxlength="120" required placeholder="A thoughtful title..." />
+  
+  <div class="editor-container">
+    <div class="editor-pane">
+      <div class="pane-header">✍️ Write (Markdown)</div>
+      <div class="editor-toolbar">
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('**', '**')">Bold</button>
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('*', '*')">Italic</button>
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('## ', '')">Heading</button>
+        <div class="toolbar-separator"></div>
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('> ', '')">Quote</button>
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('`', '`')">Code</button>
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('[', '](url)')">Link</button>
+        <div class="toolbar-separator"></div>
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('- ', '')">List</button>
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('1. ', '')">Number</button>
+        <button type="button" class="toolbar-btn" onclick="insertMarkdown('---\n', '')">Divider</button>
+      </div>
+      <textarea 
+        name="body" 
+        id="markdown-editor" 
+        maxlength="5000" 
+        required 
+        placeholder="Write your letter here...
+
+You can use:
+- **Bold** and *italic* text
+- # Headers
+- > Quotes
+- `code`
+- [Links](url)
+- Lists and more..."
+      ><%= values.body || '' %></textarea>
+      <div class="char-count">
+        <span id="char-count">0</span> / 5000 characters
+      </div>
+    </div>
+    
+    <div class="preview-pane">
+      <div class="pane-header">👁 Preview</div>
+      <div class="preview-content" id="preview">
+        <p style="color: var(--muted); text-align: center; margin-top: 100px;">
+          Your formatted letter will appear here...
+        </p>
+      </div>
+    </div>
+  </div>
+  
+  <button type="submit" class="btn btn-primary" style="font-size: 16px; padding: 12px 24px;">
+    Queue Letter for Publishing
+  </button>
+  
+  <p class="hint">💡 Letters publish after a 12-hour steep. This gives you time to reflect, but not to obsess.</p>
+  <p class="hint">📝 Markdown tips: Use **bold** for emphasis, > for quotes, and --- for dividers.</p>
 </form>
 
-
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+<script>
+  const editor = document.getElementById('markdown-editor');
+  const preview = document.getElementById('preview');
+  const charCount = document.getElementById('char-count');
+  
+  // Configure marked options
+  marked.setOptions({
+    breaks: true,
+    gfm: true,
+    headerIds: false,
+    mangle: false
+  });
+  
+  // Update preview
+  function updatePreview() {
+    const markdown = editor.value;
+    if (markdown.trim()) {
+      const html = marked.parse(markdown);
+      const clean = DOMPurify.sanitize(html);
+      preview.innerHTML = clean;
+    } else {
+      preview.innerHTML = '<p style="color: var(--muted); text-align: center; margin-top: 100px;">Your formatted letter will appear here...</p>';
+    }
+    charCount.textContent = markdown.length;
+  }
+  
+  // Insert markdown syntax
+  function insertMarkdown(before, after) {
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const text = editor.value;
+    const selected = text.substring(start, end);
+    
+    const replacement = before + (selected || 'text') + after;
+    editor.value = text.substring(0, start) + replacement + text.substring(end);
+    
+    // Set cursor position
+    const cursorPos = start + before.length + (selected ? selected.length : 4);
+    editor.focus();
+    editor.setSelectionRange(cursorPos, cursorPos);
+    
+    updatePreview();
+  }
+  
+  // Update preview on input
+  editor.addEventListener('input', updatePreview);
+  
+  // Initial preview
+  updatePreview();
+  
+  // Keyboard shortcuts
+  editor.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch(e.key) {
+        case 'b':
+          e.preventDefault();
+          insertMarkdown('**', '**');
+          break;
+        case 'i':
+          e.preventDefault();
+          insertMarkdown('*', '*');
+          break;
+        case 'k':
+          e.preventDefault();
+          insertMarkdown('[', '](url)');
+          break;
+      }
+    }
+  });
+</script>

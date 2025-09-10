@@ -2,7 +2,7 @@
 <article class="letter-detail">
   <h1><%= letter.title %></h1>
   <div class="meta">by @<%= letter.handle %> · drafted <%= new Date(letter.created_at).toLocaleString() %> · publishes <%= new Date(letter.publish_at).toLocaleString() %></div>
-  <div class="body"><pre><%= letter.body %></pre></div>
+  <div class="body markdown-content"><%- letter.body_html %></div>
   <div class="actions">
     <% if (user) { %>
       <% if (letter.did_resonate) { %>
@@ -20,7 +20,7 @@
       <% comments.forEach(c => { %>
         <li>
           <div class="comment-meta">@<%= c.handle %> · <%= new Date(c.created_at).toLocaleString() %></div>
-          <div class="comment-body"><pre><%= c.body %></pre></div>
+          <div class="comment-body markdown-content"><%- c.body_html %></div>
         </li>
       <% }) %>
     </ul>

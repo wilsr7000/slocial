@@ -19,6 +19,7 @@
     "connect-sqlite3": "^0.9.16",
     "csurf": "^1.11.0",
     "dayjs": "^1.11.18",
+    "dompurify": "^3.2.6",
     "dotenv": "^17.2.2",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
@@ -26,6 +27,8 @@
     "express-session": "^1.18.2",
     "express-validator": "^7.2.1",
     "helmet": "^8.1.0",
+    "jsdom": "^26.1.0",
+    "marked": "^16.2.1",
     "morgan": "^1.10.1"
   },
   "devDependencies": {
