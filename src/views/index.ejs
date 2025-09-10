@@ -18,7 +18,7 @@
   </div>
   <div class="feature">
     <h3>One a day</h3>
-    <p>Quality over quantity. Intentional writing, not infinite scroll.</p>
+    <p>Quality over quantity. Thoughtful writing, mindful reading.</p>
   </div>
   <div class="feature">
     <h3>No scores</h3>
@@ -98,15 +98,41 @@
     </article>
   <% }) %>
 
-  <div class="pagination">
-    <% if (page > 1) { %>
-      <a class="btn" href="/?page=<%= page - 1 %>">Previous</a>
-    <% } %>
-    <a class="btn" href="/?page=<%= page + 1 %>">Next</a>
+  <!-- Loading indicator -->
+  <div id="loading-indicator" style="display: none; text-align: center; padding: 40px;">
+    <div class="loading-spinner"></div>
+    <p style="color: var(--muted); margin-top: 16px;">Loading more letters...</p>
+  </div>
+  
+  <!-- End of feed indicator -->
+  <div id="end-of-feed" style="display: none; text-align: center; padding: 40px;">
+    <p style="color: var(--muted); font-style: italic;">✨ You've reached the end. Time to write your own letter.</p>
   </div>
 </section>
 
+<style>
+.loading-spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid var(--fg);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
+
 <script>
+let currentPage = 1;
+let isLoading = false;
+let hasMoreLetters = true;
+const isLoggedIn = <%= !!user %>;
+
 function updateReadingStatus(letterId, status) {
   fetch(`/letters/${letterId}/status`, {
     method: 'POST',
@@ -130,6 +156,143 @@ function updateReadingStatus(letterId, status) {
     alert('Failed to update reading status');
   });
 }
+
+function createLetterHTML(letter) {
+  const date = new Date(letter.publish_at).toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+  
+  const excerpt = letter.body.slice(0, 260) + (letter.body.length > 260 ? '…' : '');
+  const bio = letter.bio ? (letter.bio.slice(0, 100) + (letter.bio.length > 100 ? '…' : '')) : '';
+  
+  let actionsHTML = '';
+  if (isLoggedIn) {
+    let readingButtons = '';
+    if (letter.reading_status === 'read') {
+      readingButtons = `
+        <button class="reading-btn read completed" disabled>
+          <span class="icon">✓</span> Read
+        </button>`;
+    } else if (letter.reading_status === 'skip') {
+      readingButtons = `
+        <button class="reading-btn skip completed" disabled>
+          <span class="icon">→</span> Skipped
+        </button>`;
+    } else if (letter.reading_status === 'later') {
+      readingButtons = `
+        <button class="reading-btn later active" onclick="updateReadingStatus(${letter.id}, 'remove')">
+          <span class="icon">🔖</span> Saved
+        </button>`;
+    } else {
+      readingButtons = `
+        <button class="reading-btn read" onclick="window.location.href='/letters/${letter.id}'">
+          <span class="icon">📖</span> Read
+        </button>
+        <button class="reading-btn skip" onclick="updateReadingStatus(${letter.id}, 'skip')">
+          <span class="icon">→</span> Skip
+        </button>
+        <button class="reading-btn later" onclick="updateReadingStatus(${letter.id}, 'later')">
+          <span class="icon">🔖</span> Later
+        </button>`;
+    }
+    
+    const resonateButton = letter.did_resonate ? 
+      `<form action="/letters/${letter.id}/unresonate" method="post"><input type="hidden" name="_csrf" value="${letter.csrfToken}" /><button class="btn resonate-btn active">Resonated</button></form>` :
+      `<form action="/letters/${letter.id}/resonate" method="post"><input type="hidden" name="_csrf" value="${letter.csrfToken}" /><button class="btn resonate-btn">Resonate</button></form>`;
+    
+    actionsHTML = `
+      <div class="actions">
+        <div class="reading-actions">${readingButtons}</div>
+        <div class="resonate-action">${resonateButton}</div>
+      </div>`;
+  }
+  
+  const avatarHTML = letter.avatar_url ? 
+    `<img src="${letter.avatar_url}" alt="${letter.handle}" onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\\"font-size:16px\\">👤</span>';">` :
+    `<span style="font-size: 16px;">👤</span>`;
+  
+  return `
+    <article class="letter">
+      <h2><a href="/letters/${letter.id}">${letter.title}</a></h2>
+      <div class="meta">${date}</div>
+      <p>${excerpt}</p>
+      
+      <div class="feed-author">
+        <div class="feed-author-avatar">${avatarHTML}</div>
+        <div class="feed-author-info">
+          <div class="feed-author-name">@${letter.handle}</div>
+          ${bio ? `<div class="feed-author-bio">${bio}</div>` : ''}
+        </div>
+      </div>
+      
+      ${actionsHTML}
+    </article>
+  `;
+}
+
+async function loadMoreLetters() {
+  if (isLoading || !hasMoreLetters) return;
+  
+  isLoading = true;
+  document.getElementById('loading-indicator').style.display = 'block';
+  
+  try {
+    const response = await fetch(`/api/letters?page=${currentPage + 1}`);
+    const data = await response.json();
+    
+    if (data.letters && data.letters.length > 0) {
+      const feedContainer = document.querySelector('.feed');
+      const loadingIndicator = document.getElementById('loading-indicator');
+      
+      data.letters.forEach(letter => {
+        const letterHTML = createLetterHTML(letter);
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = letterHTML;
+        feedContainer.insertBefore(tempDiv.firstElementChild, loadingIndicator);
+      });
+      
+      currentPage++;
+      hasMoreLetters = data.hasMore;
+      
+      if (!hasMoreLetters) {
+        document.getElementById('end-of-feed').style.display = 'block';
+      }
+    } else {
+      hasMoreLetters = false;
+      document.getElementById('end-of-feed').style.display = 'block';
+    }
+  } catch (error) {
+    console.error('Error loading more letters:', error);
+  } finally {
+    isLoading = false;
+    document.getElementById('loading-indicator').style.display = 'none';
+  }
+}
+
+// Infinite scroll detection
+function handleScroll() {
+  const scrollPosition = window.innerHeight + window.scrollY;
+  const documentHeight = document.documentElement.offsetHeight;
+  
+  // Load more when user is 300px from the bottom
+  if (scrollPosition >= documentHeight - 300) {
+    loadMoreLetters();
+  }
+}
+
+// Debounce scroll events for performance
+let scrollTimeout;
+window.addEventListener('scroll', () => {
+  if (scrollTimeout) {
+    clearTimeout(scrollTimeout);
+  }
+  scrollTimeout = setTimeout(handleScroll, 100);
+});
+
+// Initial check in case the page is already at the bottom
+setTimeout(handleScroll, 500);
 </script>
 
 

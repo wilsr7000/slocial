@@ -99,6 +99,73 @@ function buildRouter(db) {
       user: req.session.user?.email || 'not logged in'
     });
   });
+
+  // API endpoint for infinite scroll
+  router.get('/api/letters', (req, res) => {
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = 10;
+    const offset = (page - 1) * pageSize;
+    const now = dayjs().toISOString();
+    
+    // Check if is_draft column exists
+    let hasDraftColumn = false;
+    try {
+      const columns = db.prepare("PRAGMA table_info(letters)").all();
+      hasDraftColumn = columns.some(col => col.name === 'is_draft');
+    } catch (e) {
+      console.error('Error checking for is_draft column:', e);
+    }
+    
+    // Use appropriate query based on whether draft column exists
+    const query = hasDraftColumn ? `
+      SELECT l.*, u.handle, u.bio, u.avatar_url,
+        (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
+        EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
+        rs.status AS reading_status
+      FROM letters l
+      JOIN users u ON u.id = l.author_id
+      LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
+      WHERE l.is_published = 1 AND l.is_draft = 0 AND l.publish_at <= @now
+      ORDER BY l.publish_at DESC
+      LIMIT @limit OFFSET @offset
+    ` : `
+      SELECT l.*, u.handle, u.bio, u.avatar_url,
+        (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
+        EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
+        rs.status AS reading_status
+      FROM letters l
+      JOIN users u ON u.id = l.author_id
+      LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
+      WHERE l.is_published = 1 AND l.publish_at <= @now
+      ORDER BY l.publish_at DESC
+      LIMIT @limit OFFSET @offset
+    `;
+    
+    const letters = db.prepare(query).all({ now, limit: pageSize, offset, uid: req.session.user?.id || -1 });
+    
+    // Check if there are more letters
+    const countQuery = hasDraftColumn ? 
+      'SELECT COUNT(*) as total FROM letters WHERE is_published = 1 AND is_draft = 0 AND publish_at <= ?' :
+      'SELECT COUNT(*) as total FROM letters WHERE is_published = 1 AND publish_at <= ?';
+    const totalCount = db.prepare(countQuery).get(now).total;
+    const hasMore = offset + letters.length < totalCount;
+    
+    // Format letters for API response
+    const formattedLetters = letters.map(letter => ({
+      ...letter,
+      body_html: renderMarkdown(letter.body),
+      publish_at_formatted: dayjs(letter.publish_at).fromNow(),
+      is_user_logged_in: !!req.session.user,
+      csrfToken: req.csrfToken()
+    }));
+    
+    res.json({
+      letters: formattedLetters,
+      hasMore,
+      page,
+      total: totalCount
+    });
+  });
   router.get('/principles', (req, res) => {
     res.render('principles', { user: req.session.user });
   });
