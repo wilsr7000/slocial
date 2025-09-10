@@ -104,28 +104,35 @@ if (process.env.APPLE_SERVICE_ID && process.env.APPLE_TEAM_ID && process.env.APP
     callbackURL: process.env.APPLE_CALLBACK_URL || '/auth/apple/callback',
     passReqToCallback: true
   },
-  async (req, accessToken, refreshToken, idToken, profile, done) => {
+  async (req, accessToken, refreshToken, decodedIdToken, profile, done) => {
     const db = new Database(dbFile);
     
     try {
       console.log('Apple Sign-In callback received');
-      console.log('ID Token:', idToken ? 'Present' : 'Missing');
+      console.log('Decoded ID Token type:', typeof decodedIdToken);
+      console.log('Decoded ID Token:', JSON.stringify(decodedIdToken, null, 2));
       
-      if (!idToken || !idToken.sub) {
-        console.error('Apple Sign-In: Invalid ID token');
+      // passport-apple passes the decoded ID token
+      // Extract the actual values directly
+      const idToken = decodedIdToken;
+      const sub = idToken.sub;
+      const email_value = idToken.email;
+      
+      if (!idToken || !sub) {
+        console.error('Apple Sign-In: Invalid ID token or missing sub');
         return done(new Error('Invalid Apple ID token'));
       }
       
       // Apple provides limited info, use the ID token data
       // Note: Apple only provides email on first sign-in, not subsequent ones
-      let email = idToken.email;
-      const appleId = idToken.sub;
+      let email = email_value;
+      const appleId = sub;
       
       console.log('Apple ID Token details:', {
-        sub: idToken.sub,
-        email: idToken.email,
-        email_verified: idToken.email_verified,
-        is_private_email: idToken.is_private_email
+        sub: appleId,
+        email: email,
+        email_verified: typeof idToken.email_verified === 'function' ? idToken.email_verified() : idToken.email_verified,
+        is_private_email: typeof idToken.is_private_email === 'function' ? idToken.is_private_email() : idToken.is_private_email
       });
       
       // Ensure appleId is a string
