@@ -164,6 +164,27 @@
     gap: 8px;
   }
   
+  .session-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #e0e0e0;
+  }
+  
+  .session-avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  
   .session-meta {
     display: flex;
     gap: 16px;
@@ -410,9 +431,21 @@
               <div class="session-info">
                 <div class="session-user">
                   <% if (session.userId) { %>
-                    <span>👤 <%= session.userName %></span>
+                    <% if (session.userAvatar) { %>
+                      <img src="<%= session.userAvatar %>" alt="<%= session.userName %>" class="session-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                      <div class="session-avatar-placeholder" style="display:none;"><%= session.userName.charAt(0).toUpperCase() %></div>
+                    <% } else { %>
+                      <div class="session-avatar-placeholder"><%= session.userName.charAt(0).toUpperCase() %></div>
+                    <% } %>
+                    <div>
+                      <div style="font-weight: 600;">@<%= session.userName %></div>
+                      <% if (session.userEmail) { %>
+                        <div style="font-size: 12px; color: var(--muted); font-weight: normal;"><%= session.userEmail %></div>
+                      <% } %>
+                    </div>
                   <% } else { %>
-                    <span>👻 Anonymous Visitor</span>
+                    <span style="font-size: 24px;">👻</span>
+                    <span>Anonymous Visitor</span>
                   <% } %>
                   <span class="expand-icon">▼</span>
                 </div>
@@ -444,6 +477,13 @@
             </div>
           </div>
           <div class="session-details" id="session-details-<%= index %>">
+            <% if (session.userId && session.userBio) { %>
+              <div style="margin-bottom: 16px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
+                <strong>User Bio:</strong>
+                <p style="margin: 8px 0 0 0; color: #495057; font-size: 14px; line-height: 1.5;"><%= session.userBio %></p>
+              </div>
+            <% } %>
+            
             <% if (session.pagesVisited.length > 0) { %>
               <div style="margin-bottom: 16px;">
                 <strong>Pages Visited:</strong>

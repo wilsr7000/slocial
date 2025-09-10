@@ -241,7 +241,7 @@ class EventTracker {
       // For each session, get its events
       const sessionData = sessions.map(session => {
         const events = this.db.prepare(`
-          SELECT e.*, u.handle as user_handle
+          SELECT e.*, u.handle as user_handle, u.avatar_url, u.email, u.bio
           FROM events e
           LEFT JOIN users u ON e.user_id = u.id
           WHERE e.session_id = ?
@@ -274,10 +274,13 @@ class EventTracker {
           .filter(e => e.event_type === 'page_view' && e.path)
           .map(e => e.path))];
         
-        // Get user info
+        // Get user info from first event with user data
         const userEvent = events.find(e => e.user_id);
         const userName = userEvent ? userEvent.user_handle : 'Anonymous';
         const userId = userEvent ? userEvent.user_id : null;
+        const userAvatar = userEvent ? userEvent.avatar_url : null;
+        const userEmail = userEvent ? userEvent.email : null;
+        const userBio = userEvent ? userEvent.bio : null;
         
         return {
           sessionId: session.session_id,
@@ -287,6 +290,9 @@ class EventTracker {
           eventCount: session.event_count,
           userId,
           userName,
+          userAvatar,
+          userEmail,
+          userBio,
           ipAddress: session.ip_address,
           userAgent: session.user_agent,
           location,
