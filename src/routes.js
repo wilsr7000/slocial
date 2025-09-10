@@ -46,7 +46,18 @@ function buildRouter(db) {
     const pageSize = 10;
     const offset = (page - 1) * pageSize;
     const now = dayjs().toISOString();
-    const letters = db.prepare(`
+    
+    // Check if is_draft column exists
+    let hasDraftColumn = false;
+    try {
+      const columns = db.prepare("PRAGMA table_info(letters)").all();
+      hasDraftColumn = columns.some(col => col.name === 'is_draft');
+    } catch (e) {
+      console.error('Error checking for is_draft column:', e);
+    }
+    
+    // Use appropriate query based on whether draft column exists
+    const query = hasDraftColumn ? `
       SELECT l.*, u.handle, u.bio, u.avatar_url,
         (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
         EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
@@ -57,7 +68,20 @@ function buildRouter(db) {
       WHERE l.is_published = 1 AND l.is_draft = 0 AND l.publish_at <= @now
       ORDER BY l.publish_at DESC
       LIMIT @limit OFFSET @offset
-    `).all({ now, limit: pageSize, offset, uid: req.session.user?.id || -1 });
+    ` : `
+      SELECT l.*, u.handle, u.bio, u.avatar_url,
+        (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
+        EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
+        rs.status AS reading_status
+      FROM letters l
+      JOIN users u ON u.id = l.author_id
+      LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
+      WHERE l.is_published = 1 AND l.publish_at <= @now
+      ORDER BY l.publish_at DESC
+      LIMIT @limit OFFSET @offset
+    `;
+    
+    const letters = db.prepare(query).all({ now, limit: pageSize, offset, uid: req.session.user?.id || -1 });
 
     res.render('index', { user: req.session.user, letters, page, pageClass: 'home' });
   });
@@ -439,13 +463,31 @@ function buildRouter(db) {
   router.get('/letters/:id', (req, res) => {
     const id = Number(req.params.id);
     const uid = req.session.user?.id || -1;
-    const letter = db.prepare(`
+    
+    // Check if is_draft column exists
+    let hasDraftColumn = false;
+    try {
+      const columns = db.prepare("PRAGMA table_info(letters)").all();
+      hasDraftColumn = columns.some(col => col.name === 'is_draft');
+    } catch (e) {
+      console.error('Error checking for is_draft column:', e);
+    }
+    
+    const query = hasDraftColumn ? `
       SELECT l.*, u.handle, u.bio, u.avatar_url,
         (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
         EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate
       FROM letters l JOIN users u ON u.id = l.author_id 
       WHERE l.id = @id AND (l.is_draft = 0 OR (l.is_draft = 1 AND l.author_id = @uid))
-    `).get({ id, uid });
+    ` : `
+      SELECT l.*, u.handle, u.bio, u.avatar_url,
+        (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
+        EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate
+      FROM letters l JOIN users u ON u.id = l.author_id 
+      WHERE l.id = @id
+    `;
+    
+    const letter = db.prepare(query).get({ id, uid });
     if (!letter) return res.status(404).send('Not found');
     
     // Mark as reading/read if user is logged in
