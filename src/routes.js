@@ -377,6 +377,23 @@ function buildRouter(db) {
     res.redirect('/admin');
   });
 
+  // 404 handler - track not found pages
+  router.use((req, res) => {
+    eventTracker.track('404_error', {
+      sessionId: req.sessionID,
+      userId: req.session.user?.id || null,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      path: req.path,
+      method: req.method,
+      metadata: {
+        referrer: req.get('referrer') || 'direct',
+        fullUrl: req.originalUrl
+      }
+    });
+    res.status(404).send('Not found');
+  });
+
   return router;
 }
 

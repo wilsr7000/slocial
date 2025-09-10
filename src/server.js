@@ -43,37 +43,88 @@ try {
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   
-  // Track page view start
-  if (req.method === 'GET' && !req.path.startsWith('/public/')) {
-    eventTracker.startPageView(req.sessionID, req.path);
+  // Track ALL HTTP requests (not just page views)
+  const isStaticAsset = req.path.startsWith('/public/') || 
+                        req.path.startsWith('/css/') || 
+                        req.path.startsWith('/js/') ||
+                        req.path.endsWith('.ico');
+  
+  if (!isStaticAsset) {
+    // Track the request immediately
+    eventTracker.track('web_request', {
+      sessionId: req.sessionID,
+      userId: req.session.user?.id || null,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      path: req.path,
+      method: req.method,
+      metadata: {
+        referrer: req.get('referrer') || 'direct',
+        query: req.query,
+        isAuthenticated: !!req.session.user,
+        userHandle: req.session.user?.handle
+      }
+    });
     
     // Track visitor event for new sessions
     if (!req.session.hasVisited) {
       req.session.hasVisited = true;
-      eventTracker.track('visitor', {
+      eventTracker.track('new_visitor', {
         sessionId: req.sessionID,
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
         path: req.path,
-        metadata: { referrer: req.get('referrer') || 'direct' }
+        metadata: { 
+          referrer: req.get('referrer') || 'direct',
+          landingPage: req.path,
+          timestamp: new Date().toISOString()
+        }
       });
     }
     
-    // Override res.render to track page view completion
-    const originalRender = res.render.bind(res);
-    res.render = function(...args) {
-      // Track page view end when rendering completes
-      res.on('finish', () => {
-        eventTracker.endPageView(
-          req.sessionID,
-          req.path,
-          req.session.user?.id,
-          req.ip,
-          req.get('user-agent')
-        );
-      });
-      return originalRender(...args);
-    };
+    // Track page view timing for GET requests
+    if (req.method === 'GET') {
+      const startTime = Date.now();
+      eventTracker.startPageView(req.sessionID, req.path);
+      
+      // Track response time and status
+      const originalSend = res.send.bind(res);
+      const originalRender = res.render.bind(res);
+      const originalJson = res.json.bind(res);
+      
+      const trackResponse = () => {
+        const duration = Date.now() - startTime;
+        eventTracker.track('page_view', {
+          sessionId: req.sessionID,
+          userId: req.session.user?.id || null,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+          path: req.path,
+          method: 'GET',
+          durationMs: duration,
+          metadata: {
+            statusCode: res.statusCode,
+            referrer: req.get('referrer') || 'direct',
+            isAuthenticated: !!req.session.user
+          }
+        });
+      };
+      
+      res.send = function(...args) {
+        trackResponse();
+        return originalSend(...args);
+      };
+      
+      res.render = function(...args) {
+        trackResponse();
+        return originalRender(...args);
+      };
+      
+      res.json = function(...args) {
+        trackResponse();
+        return originalJson(...args);
+      };
+    }
   }
   
   next();

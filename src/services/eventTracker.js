@@ -184,13 +184,23 @@ class EventTracker {
       `).get().count,
       
       uniqueVisitors: this.db.prepare(`
-        SELECT COUNT(DISTINCT COALESCE(user_id, session_id)) as count 
+        SELECT COUNT(DISTINCT session_id) as count 
         FROM events WHERE created_at >= ${since}
       `).get().count,
       
       pageViews: this.db.prepare(`
         SELECT COUNT(*) as count FROM events 
         WHERE event_type = 'page_view' AND created_at >= ${since}
+      `).get().count,
+      
+      webRequests: this.db.prepare(`
+        SELECT COUNT(*) as count FROM events 
+        WHERE event_type = 'web_request' AND created_at >= ${since}
+      `).get().count,
+      
+      newVisitors: this.db.prepare(`
+        SELECT COUNT(*) as count FROM events 
+        WHERE event_type = 'new_visitor' AND created_at >= ${since}
       `).get().count,
       
       logins: this.db.prepare(`

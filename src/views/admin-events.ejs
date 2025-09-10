@@ -79,8 +79,10 @@
   .event-type.logout { background: #f8d7da; color: #721c24; }
   .event-type.signup { background: #cce5ff; color: #004085; }
   .event-type.page_view { background: #fff3cd; color: #856404; }
+  .event-type.web_request { background: #e7e8ea; color: #495057; }
+  .event-type.new_visitor { background: #d1ecf1; color: #0c5460; }
   .event-type.visitor { background: #e2e3e5; color: #383d41; }
-  .event-type.letter_create { background: #d1ecf1; color: #0c5460; }
+  .event-type.letter_create { background: #d4edda; color: #155724; }
   .event-type.comment { background: #f5c6cb; color: #721c24; }
   .event-type.resonate { background: #c3e6cb; color: #155724; }
   
@@ -152,11 +154,19 @@
     </div>
     <div class="stat-card">
       <div class="stat-value"><%= analytics.uniqueVisitors %></div>
-      <div class="stat-label">Unique Visitors</div>
+      <div class="stat-label">Unique Sessions</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value"><%= analytics.webRequests || 0 %></div>
+      <div class="stat-label">Web Requests</div>
     </div>
     <div class="stat-card">
       <div class="stat-value"><%= analytics.pageViews %></div>
       <div class="stat-label">Page Views</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value"><%= analytics.newVisitors || 0 %></div>
+      <div class="stat-label">New Visitors</div>
     </div>
     <div class="stat-card">
       <div class="stat-value"><%= analytics.logins %></div>
@@ -165,6 +175,10 @@
     <div class="stat-card">
       <div class="stat-value"><%= Math.round(analytics.avgReadingTime / 1000) %>s</div>
       <div class="stat-label">Avg Reading Time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value"><%= analytics.pageViews && analytics.uniqueVisitors ? (analytics.pageViews / analytics.uniqueVisitors).toFixed(1) : 0 %></div>
+      <div class="stat-label">Pages/Session</div>
     </div>
   </div>
   
@@ -180,11 +194,15 @@
       
       <select name="type" class="filter-select" onchange="this.form.submit()">
         <option value="">All Events</option>
+        <option value="web_request" <%= selectedType === 'web_request' ? 'selected' : '' %>>Web Requests</option>
+        <option value="page_view" <%= selectedType === 'page_view' ? 'selected' : '' %>>Page Views</option>
+        <option value="new_visitor" <%= selectedType === 'new_visitor' ? 'selected' : '' %>>New Visitors</option>
         <option value="login" <%= selectedType === 'login' ? 'selected' : '' %>>Logins</option>
         <option value="logout" <%= selectedType === 'logout' ? 'selected' : '' %>>Logouts</option>
         <option value="signup" <%= selectedType === 'signup' ? 'selected' : '' %>>Signups</option>
-        <option value="page_view" <%= selectedType === 'page_view' ? 'selected' : '' %>>Page Views</option>
-        <option value="visitor" <%= selectedType === 'visitor' ? 'selected' : '' %>>New Visitors</option>
+        <option value="letter_create" <%= selectedType === 'letter_create' ? 'selected' : '' %>>Letters Created</option>
+        <option value="comment" <%= selectedType === 'comment' ? 'selected' : '' %>>Comments</option>
+        <option value="resonate" <%= selectedType === 'resonate' ? 'selected' : '' %>>Resonates</option>
       </select>
     </form>
   </div>
