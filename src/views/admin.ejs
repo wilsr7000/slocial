@@ -17,6 +17,7 @@
   .stat-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
   .stat-card h3{margin:0;font-size:14px;color:var(--muted)}
   .stat-card p{margin:8px 0 0 0;font-size:24px;font-weight:bold}
+  a.stat-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.15)}
   .filter-tabs{display:flex;gap:8px;margin-bottom:12px}
   .filter-tabs a{padding:6px 12px;border:1px solid var(--border);border-radius:6px;text-decoration:none}
   .filter-tabs a.active{background:var(--fg);color:white}
@@ -49,6 +50,10 @@
     <h3>Comments</h3>
     <p><%= stats.totalComments %></p>
   </div>
+  <a href="/admin/events" class="stat-card" style="text-decoration: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; cursor: pointer; transition: transform 0.2s;">
+    <h3 style="color: white;">📊 Events</h3>
+    <p style="color: white; font-size: 14px;">View Analytics</p>
+  </a>
 </section>
 
 <section class="admin-section">
