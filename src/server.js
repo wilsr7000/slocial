@@ -33,7 +33,7 @@ app.use(passport.session());
 
 const db = initializeDatabase();
 
-// Run inline migration to add draft columns
+// Run inline migration to add draft columns (v2)
 console.log('Checking database schema...');
 try {
   const columns = db.prepare("PRAGMA table_info(letters)").all();
