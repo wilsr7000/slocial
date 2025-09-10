@@ -513,7 +513,7 @@ function buildRouter(db) {
   );
   router.post('/compose', requireAuth,
     body('title').isLength({ min: 1, max: 120 }),
-    body('body').isLength({ min: 1, max: 50000 }), // Increased to allow images
+    body('body').isLength({ min: 1, max: 500000 }), // Increased to allow multiple images
     (req, res) => {
       const errors = validationResult(req);
       if (!errors.isEmpty()) return res.status(400).render('compose', { user: req.session.user, errors: errors.array(), values: req.body, pageClass: 'compose' });
@@ -553,13 +553,13 @@ function buildRouter(db) {
 
         const publish_at = dayjs().add(12, 'hour').toISOString();
         const info = db.prepare('INSERT INTO letters (author_id, title, body, publish_at, is_published, is_draft) VALUES (?, ?, ?, ?, 0, 0)')
-          .run(req.session.user.id, req.body.title, req.body.body, publish_at);
+          .run(req.session.user.id, title, body, publish_at);
         
         eventTracker.track('letter_create', {
           userId: req.session.user.id,
           sessionId: req.sessionID,
           letterId: info.lastInsertRowid,
-          metadata: { title: req.body.title, wordCount: req.body.body.split(/\s+/).length }
+          metadata: { title: title.slice(0, 50), wordCount: body.split(/\s+/).length }
         });
         res.redirect(`/letters/${info.lastInsertRowid}`);
       }

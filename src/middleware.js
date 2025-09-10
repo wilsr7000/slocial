@@ -7,8 +7,8 @@ function baseMiddleware(app) {
   app.use(helmet({
     contentSecurityPolicy: false,
   }));
-  app.use(express.urlencoded({ extended: true }));
-  app.use(express.json());
+  app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Increased for image support
+  app.use(express.json({ limit: '10mb' })); // Increased for image support
   app.use(morgan('dev'));
   app.use('/static', express.static('src/public'));
 }
