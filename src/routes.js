@@ -5,6 +5,7 @@ const dayjs = require('dayjs');
 const { marked } = require('marked');
 const createDOMPurify = require('dompurify');
 const { JSDOM } = require('jsdom');
+const eventTracker = require('./services/eventTracker');
 
 const window = new JSDOM('').window;
 const DOMPurify = createDOMPurify(window);
@@ -89,8 +90,15 @@ function buildRouter(db) {
       const password_hash = bcrypt.hashSync(password, 12);
       try {
         const info = db.prepare('INSERT INTO users (handle, email, password_hash) VALUES (?, ?, ?)').run(handle, email, password_hash);
-        req.session.user = { id: info.lastInsertRowid, handle, email, is_admin: false };
-        res.redirect('/');
+      req.session.user = { id: info.lastInsertRowid, handle, email, is_admin: false };
+      eventTracker.track('signup', {
+        userId: info.lastInsertRowid,
+        sessionId: req.sessionID,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        metadata: { handle, email }
+      });
+      res.redirect('/');
       } catch (e) {
         const msg = /UNIQUE/.test(e.message) ? 'Handle or email already taken' : 'Signup failed';
         res.status(400).render('signup', { user: req.session.user, errors: [{ msg }], values: req.body });
@@ -111,11 +119,25 @@ function buildRouter(db) {
         return res.status(401).render('login', { user: req.session.user, errors: [{ msg: 'Invalid credentials' }], values: req.body });
       }
       req.session.user = { id: user.id, handle: user.handle, email: user.email, is_admin: user.is_admin === 1 };
+      eventTracker.track('login', {
+        userId: user.id,
+        sessionId: req.sessionID,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        metadata: { handle: user.handle }
+      });
       res.redirect('/');
     }
   );
 
   router.post('/logout', (req, res) => {
+    const userId = req.session.user?.id;
+    eventTracker.track('logout', {
+      userId,
+      sessionId: req.sessionID,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
     req.session.destroy(() => res.redirect('/'));
   });
 
@@ -162,6 +184,12 @@ function buildRouter(db) {
       const publish_at = dayjs().add(12, 'hour').toISOString();
       const info = db.prepare('INSERT INTO letters (author_id, title, body, publish_at, is_published) VALUES (?, ?, ?, ?, 0)')
         .run(req.session.user.id, req.body.title, req.body.body, publish_at);
+      eventTracker.track('letter_create', {
+        userId: req.session.user.id,
+        sessionId: req.sessionID,
+        letterId: info.lastInsertRowid,
+        metadata: { title: req.body.title, wordCount: req.body.body.split(/\s+/).length }
+      });
       res.redirect(`/letters/${info.lastInsertRowid}`);
     }
   );
@@ -200,6 +228,12 @@ function buildRouter(db) {
     const id = Number(req.params.id);
     try {
       db.prepare('INSERT OR IGNORE INTO resonates (letter_id, user_id) VALUES (?, ?)').run(id, req.session.user.id);
+      eventTracker.track('resonate', {
+        userId: req.session.user.id,
+        sessionId: req.sessionID,
+        letterId: id,
+        metadata: { action: 'add' }
+      });
     } catch {}
     res.redirect(`/letters/${id}`);
   });
@@ -216,7 +250,13 @@ function buildRouter(db) {
       const errors = validationResult(req);
       if (!errors.isEmpty()) return res.status(400).redirect(`/letters/${id}`);
       try {
-        db.prepare('INSERT INTO comments (letter_id, author_id, body) VALUES (?, ?, ?)').run(id, req.session.user.id, req.body.body);
+        const info = db.prepare('INSERT INTO comments (letter_id, author_id, body) VALUES (?, ?, ?)').run(id, req.session.user.id, req.body.body);
+        eventTracker.track('comment', {
+          userId: req.session.user.id,
+          sessionId: req.sessionID,
+          letterId: id,
+          metadata: { commentId: info.lastInsertRowid, length: req.body.body.length }
+        });
       } catch (e) {
         // Ignore duplicate comment per user
       }
@@ -232,6 +272,26 @@ function buildRouter(db) {
   });
 
   // Admin routes (hidden)
+  // Admin Event Log
+  router.get('/admin/events', requireAdmin, (req, res) => {
+    const eventType = req.query.type || '';
+    const period = req.query.period || '24h';
+    
+    const filters = {};
+    if (eventType) filters.eventType = eventType;
+    
+    const events = eventTracker.getRecentEvents(200, filters);
+    const analytics = eventTracker.getAnalytics(period);
+    
+    res.render('admin-events', { 
+      user: req.session.user, 
+      events, 
+      analytics, 
+      selectedType: eventType,
+      selectedPeriod: period 
+    });
+  });
+
   router.get('/admin', requireAdmin, (req, res) => {
     const filter = req.query.filter || 'all';
     

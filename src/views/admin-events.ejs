@@ -1,0 +1,261 @@
+<style>
+  .events-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  .analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+  
+  .stat-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+  
+  .stat-value {
+    font-size: 32px;
+    font-weight: bold;
+    color: var(--accent);
+  }
+  
+  .stat-label {
+    color: var(--muted);
+    font-size: 14px;
+    margin-top: 4px;
+  }
+  
+  .filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  
+  .filter-select {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: white;
+  }
+  
+  .events-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .events-table th {
+    background: #f5f5f5;
+    padding: 12px;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    font-weight: 600;
+  }
+  
+  .events-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .event-type {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  
+  .event-type.login { background: #d4edda; color: #155724; }
+  .event-type.logout { background: #f8d7da; color: #721c24; }
+  .event-type.signup { background: #cce5ff; color: #004085; }
+  .event-type.page_view { background: #fff3cd; color: #856404; }
+  .event-type.visitor { background: #e2e3e5; color: #383d41; }
+  .event-type.letter_create { background: #d1ecf1; color: #0c5460; }
+  .event-type.comment { background: #f5c6cb; color: #721c24; }
+  .event-type.resonate { background: #c3e6cb; color: #155724; }
+  
+  .metadata {
+    font-size: 11px;
+    color: var(--muted);
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .duration {
+    font-weight: 600;
+  }
+  
+  .top-pages {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+  }
+  
+  .page-list {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .page-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .admin-nav {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 10px;
+  }
+  
+  .admin-nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  
+  .admin-nav a.active {
+    color: var(--accent);
+  }
+</style>
+
+<div class="events-container">
+  <h1>Event Log & Analytics</h1>
+  
+  <div class="admin-nav">
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/events" class="active">Events</a>
+  </div>
+  
+  <!-- Analytics Summary -->
+  <div class="analytics-grid">
+    <div class="stat-card">
+      <div class="stat-value"><%= analytics.totalEvents %></div>
+      <div class="stat-label">Total Events</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value"><%= analytics.uniqueVisitors %></div>
+      <div class="stat-label">Unique Visitors</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value"><%= analytics.pageViews %></div>
+      <div class="stat-label">Page Views</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value"><%= analytics.logins %></div>
+      <div class="stat-label">Logins</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value"><%= Math.round(analytics.avgReadingTime / 1000) %>s</div>
+      <div class="stat-label">Avg Reading Time</div>
+    </div>
+  </div>
+  
+  <!-- Filters -->
+  <div class="filters">
+    <form method="get" style="display: flex; gap: 10px;">
+      <select name="period" class="filter-select" onchange="this.form.submit()">
+        <option value="1h" <%= selectedPeriod === '1h' ? 'selected' : '' %>>Last Hour</option>
+        <option value="24h" <%= selectedPeriod === '24h' ? 'selected' : '' %>>Last 24 Hours</option>
+        <option value="7d" <%= selectedPeriod === '7d' ? 'selected' : '' %>>Last 7 Days</option>
+        <option value="30d" <%= selectedPeriod === '30d' ? 'selected' : '' %>>Last 30 Days</option>
+      </select>
+      
+      <select name="type" class="filter-select" onchange="this.form.submit()">
+        <option value="">All Events</option>
+        <option value="login" <%= selectedType === 'login' ? 'selected' : '' %>>Logins</option>
+        <option value="logout" <%= selectedType === 'logout' ? 'selected' : '' %>>Logouts</option>
+        <option value="signup" <%= selectedType === 'signup' ? 'selected' : '' %>>Signups</option>
+        <option value="page_view" <%= selectedType === 'page_view' ? 'selected' : '' %>>Page Views</option>
+        <option value="visitor" <%= selectedType === 'visitor' ? 'selected' : '' %>>New Visitors</option>
+      </select>
+    </form>
+  </div>
+  
+  <!-- Top Pages -->
+  <% if (analytics.topPages && analytics.topPages.length > 0) { %>
+  <div class="top-pages">
+    <h3>Top Pages</h3>
+    <ul class="page-list">
+      <% analytics.topPages.forEach(page => { %>
+        <li>
+          <span><%= page.path %></span>
+          <span><strong><%= page.views %></strong> views</span>
+        </li>
+      <% }) %>
+    </ul>
+  </div>
+  <% } %>
+  
+  <!-- Events Table -->
+  <h2>Recent Events</h2>
+  <table class="events-table">
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Event</th>
+        <th>User</th>
+        <th>Path</th>
+        <th>Duration</th>
+        <th>IP</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% events.forEach(event => { %>
+        <tr>
+          <td><%= new Date(event.created_at).toLocaleString() %></td>
+          <td><span class="event-type <%= event.event_type %>"><%= event.event_type %></span></td>
+          <td>
+            <% if (event.user_handle) { %>
+              @<%= event.user_handle %>
+            <% } else if (event.session_id) { %>
+              <span style="color: var(--muted)">visitor</span>
+            <% } else { %>
+              -
+            <% } %>
+          </td>
+          <td><%= event.path || '-' %></td>
+          <td>
+            <% if (event.duration_ms) { %>
+              <span class="duration"><%= (event.duration_ms / 1000).toFixed(1) %>s</span>
+            <% } else { %>
+              -
+            <% } %>
+          </td>
+          <td><%= event.ip_address || '-' %></td>
+          <td>
+            <% if (event.metadata && Object.keys(event.metadata).length > 0) { %>
+              <span class="metadata" title="<%= JSON.stringify(event.metadata) %>">
+                <%= JSON.stringify(event.metadata) %>
+              </span>
+            <% } else { %>
+              -
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  
+  <% if (events.length === 0) { %>
+    <p style="text-align: center; padding: 40px; color: var(--muted);">No events found for the selected filters.</p>
+  <% } %>
+</div>

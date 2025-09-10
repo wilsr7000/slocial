@@ -6,7 +6,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "migrate": "node src/db/migrate-admin.js && node src/db/migrate-profile.js",
+    "migrate": "node src/db/migrate-admin.js && node src/db/migrate-profile.js && node src/db/migrate-events.js",
     "setup-admin": "node src/db/setup-admin.js"
   },
   "keywords": [],

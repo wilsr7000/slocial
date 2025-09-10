@@ -52,6 +52,27 @@ function initializeDatabase() {
       FOREIGN KEY(letter_id) REFERENCES letters(id),
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_type TEXT NOT NULL,
+      user_id INTEGER,
+      session_id TEXT,
+      ip_address TEXT,
+      user_agent TEXT,
+      path TEXT,
+      method TEXT,
+      letter_id INTEGER,
+      duration_ms INTEGER,
+      metadata TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+      FOREIGN KEY (letter_id) REFERENCES letters(id) ON DELETE SET NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_events_user_id ON events(user_id);
+    CREATE INDEX IF NOT EXISTS idx_events_event_type ON events(event_type);
   `);
 
   return db;
