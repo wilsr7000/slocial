@@ -332,7 +332,7 @@ function buildRouter(db) {
   );
 
   router.get('/compose', requireAuth, (req, res) => {
-    res.render('compose', { user: req.session.user, errors: [], values: {} });
+    res.render('compose', { user: req.session.user, errors: [], values: {}, pageClass: 'compose' });
   });
   
   // Drafts routes
@@ -423,7 +423,8 @@ function buildRouter(db) {
       user: req.session.user, 
       errors: [], 
       values: draft,
-      draft
+      draft,
+      pageClass: 'compose'
     });
   });
   
@@ -477,7 +478,7 @@ function buildRouter(db) {
     body('body').isLength({ min: 1, max: 50000 }), // Increased to allow images
     (req, res) => {
       const errors = validationResult(req);
-      if (!errors.isEmpty()) return res.status(400).render('compose', { user: req.session.user, errors: errors.array(), values: req.body });
+      if (!errors.isEmpty()) return res.status(400).render('compose', { user: req.session.user, errors: errors.array(), values: req.body, pageClass: 'compose' });
 
       const { title, body, action } = req.body;
       const now = dayjs();
@@ -509,7 +510,7 @@ function buildRouter(db) {
         const last = db.prepare('SELECT created_at FROM letters WHERE author_id = ? AND is_draft = 0 ORDER BY created_at DESC LIMIT 1')
           .get(req.session.user.id);
         if (last && dayjs(last.created_at).isAfter(dayjs().subtract(24, 'hour'))) {
-          return res.status(429).render('compose', { user: req.session.user, errors: [{ msg: 'You can only publish once every 24 hours.' }], values: req.body });
+          return res.status(429).render('compose', { user: req.session.user, errors: [{ msg: 'You can only publish once every 24 hours.' }], values: req.body, pageClass: 'compose' });
         }
 
         const publish_at = dayjs().add(12, 'hour').toISOString();
