@@ -38,6 +38,7 @@
   padding: 6px 12px;
   cursor: pointer;
   font-size: 14px;
+  color: var(--fg);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -220,9 +221,9 @@ pre{white-space:pre-wrap;margin:0}
 /* Buttons */
 .btn{display:inline-block;padding:10px 14px;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--fg);text-decoration:none}
 .btn:hover{background:#f2f2f0;text-decoration:none}
-.btn-primary{border-color:transparent;background:var(--fg);color:#fff}
+.btn-primary{border-color:transparent;background:var(--fg);color:var(--bg)}
 .btn-primary:hover{filter:brightness(1.05)}
-.btn-ghost{background:transparent}
+.btn-ghost{background:transparent;color:var(--fg)}
 
 .section-title{font-size:18px;color:var(--muted);margin:8px 0 6px 0}
 
@@ -354,7 +355,8 @@ pre{white-space:pre-wrap;margin:0}
   padding: 6px 14px;
   font-size: 13px;
   border-radius: 16px;
-  background: white;
+  background: var(--card);
+  color: var(--fg);
   border: 1px solid var(--border);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -362,12 +364,12 @@ pre{white-space:pre-wrap;margin:0}
 
 .resonate-btn:hover {
   background: var(--fg);
-  color: white;
+  color: var(--bg);
 }
 
 .resonate-btn.active {
   background: var(--fg);
-  color: white;
+  color: var(--bg);
 }
 
 
