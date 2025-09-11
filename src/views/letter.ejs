@@ -112,9 +112,15 @@
   <div class="actions">
     <% if (user) { %>
       <% if (letter.did_resonate) { %>
-        <form action="/letters/<%= letter.id %>/unresonate" method="post"><button>Unresonate</button></form>
+        <form action="/letters/<%= letter.id %>/unresonate" method="post">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <button>Unresonate</button>
+        </form>
       <% } else { %>
-        <form action="/letters/<%= letter.id %>/resonate" method="post"><button>Resonate</button></form>
+        <form action="/letters/<%= letter.id %>/resonate" method="post">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <button>Resonate</button>
+        </form>
       <% } %>
     <% } %>
   </div>
