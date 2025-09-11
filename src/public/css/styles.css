@@ -18,7 +18,7 @@
   --bg:#0d0d0d;
   --fg:#e8e8e8;
   --muted:#8a8a8a;
-  --accent:#60a5fa;
+  --accent:#e8e8e8;
   --card:#181818;
   --border:#2a2a2a;
   --nav-bg:#111111;
@@ -80,7 +80,7 @@ body, .nav, .feed .letter, input, textarea, button, .errors {
 }
 
 [data-theme="dark"] .resonate-btn.active {
-  background: var(--accent);
+  background: var(--fg);
   color: var(--bg);
 }
 
@@ -105,9 +105,9 @@ body, .nav, .feed .letter, input, textarea, button, .errors {
 
 [data-theme="dark"] input:focus,
 [data-theme="dark"] textarea:focus {
-  border-color: var(--accent);
+  border-color: var(--fg);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
 }
 
 [data-theme="dark"] .nav {
@@ -115,13 +115,13 @@ body, .nav, .feed .letter, input, textarea, button, .errors {
 }
 
 [data-theme="dark"] .btn-primary {
-  background: var(--accent);
-  color: #0d0d0d;
+  background: var(--fg);
+  color: var(--bg);
 }
 
 [data-theme="dark"] .btn-primary:hover {
-  filter: brightness(1.2);
-  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
+  filter: brightness(0.9);
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:'Courier New',Courier,'Lucida Console',Monaco,monospace;line-height:1.6;min-height:100vh}
