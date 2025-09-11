@@ -236,8 +236,21 @@ function buildRouter(db) {
       const { handle, email, password } = req.body;
       const password_hash = bcrypt.hashSync(password, 12);
       try {
-        const info = db.prepare('INSERT INTO users (handle, email, password_hash) VALUES (?, ?, ?)').run(handle, email, password_hash);
-      req.session.user = { id: info.lastInsertRowid, handle, email, is_admin: false };
+        // Check if is_slocialite column exists
+        let hasSlocialiteColumn = false;
+        try {
+          const columns = db.prepare("PRAGMA table_info(users)").all();
+          hasSlocialiteColumn = columns.some(col => col.name === 'is_slocialite');
+        } catch (e) {
+          // Column might not exist yet
+        }
+        
+        // New users are Slocialites by default (need moderation)
+        const info = hasSlocialiteColumn ?
+          db.prepare('INSERT INTO users (handle, email, password_hash, is_slocialite) VALUES (?, ?, ?, 1)').run(handle, email, password_hash) :
+          db.prepare('INSERT INTO users (handle, email, password_hash) VALUES (?, ?, ?)').run(handle, email, password_hash);
+        
+        req.session.user = { id: info.lastInsertRowid, handle, email, is_admin: false, is_slocialite: hasSlocialiteColumn ? true : false };
       eventTracker.track('signup', {
         userId: info.lastInsertRowid,
         sessionId: req.sessionID,
@@ -960,6 +973,32 @@ function buildRouter(db) {
     if (id === req.session.user.id) return res.redirect('/admin'); // Can't ban yourself
     // Add random string to email to effectively ban them
     db.prepare('UPDATE users SET email = email || "_banned_" || ? WHERE id = ?').run(Date.now(), id);
+    res.redirect('/admin');
+  });
+
+  // Promote Slocialite to Author
+  router.post('/admin/promote-to-author/:id', requireAdmin, (req, res) => {
+    const id = Number(req.params.id);
+    
+    // Check if is_slocialite column exists
+    let hasSlocialiteColumn = false;
+    try {
+      const columns = db.prepare("PRAGMA table_info(users)").all();
+      hasSlocialiteColumn = columns.some(col => col.name === 'is_slocialite');
+    } catch (e) {
+      // Column might not exist yet
+    }
+    
+    if (hasSlocialiteColumn) {
+      db.prepare('UPDATE users SET is_slocialite = 0 WHERE id = ?').run(id);
+      
+      eventTracker.track('user_promoted', {
+        userId: req.session.user.id,
+        sessionId: req.sessionID,
+        metadata: { promotedUserId: id, newRole: 'author' }
+      });
+    }
+    
     res.redirect('/admin');
   });
 

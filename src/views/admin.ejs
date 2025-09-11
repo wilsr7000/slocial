@@ -182,13 +182,29 @@
       <% users.forEach(u => { %>
         <tr>
           <td><%= u.id %></td>
-          <td>@<%= u.handle %></td>
+          <td>
+            @<%= u.handle %>
+            <% if (u.is_slocialite) { %>
+              <span style="color: #f59e0b; font-size: 11px;">[Slocialite]</span>
+            <% } %>
+          </td>
           <td><%= u.email %></td>
-          <td><%= u.is_admin ? '✓ Admin' : '' %></td>
+          <td>
+            <%= u.is_admin ? '✓ Admin' : '' %>
+            <% if (!u.is_admin && !u.is_slocialite) { %>
+              <span style="color: #22c55e;">Author</span>
+            <% } %>
+          </td>
           <td><%= new Date(u.created_at).toLocaleDateString() %></td>
           <td class="admin-actions">
             <% if (u.id !== user.id) { %>
-              <form action="/admin/toggle-admin/<%= u.id %>" method="post">
+              <% if (u.is_slocialite) { %>
+                <form action="/admin/promote-to-author/<%= u.id %>" method="post" style="display: inline;">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                  <button class="success" title="Promote to Author (no moderation needed)">→ Author</button>
+                </form>
+              <% } %>
+              <form action="/admin/toggle-admin/<%= u.id %>" method="post" style="display: inline;">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                 <button><%= u.is_admin ? 'Remove Admin' : 'Make Admin' %></button>
               </form>
