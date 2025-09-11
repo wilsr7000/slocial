@@ -115,13 +115,14 @@ body, .nav, .feed .letter, input, textarea, button, .errors {
 }
 
 [data-theme="dark"] .btn-primary {
-  background: var(--fg);
-  color: var(--bg);
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--fg);
 }
 
 [data-theme="dark"] .btn-primary:hover {
-  filter: brightness(0.9);
-  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+  background: var(--hover-bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:'Courier New',Courier,'Lucida Console',Monaco,monospace;line-height:1.6;min-height:100vh}
