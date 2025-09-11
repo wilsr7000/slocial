@@ -60,6 +60,9 @@
   <h2>Recent Letters</h2>
   <div class="filter-tabs">
     <a href="/admin" class="<%= filter === 'all' ? 'active' : '' %>">All</a>
+    <a href="/admin?filter=moderation" class="<%= filter === 'moderation' ? 'active' : '' %>" style="<%= filter === 'moderation' ? '' : '' %>">
+      🔍 Moderation Queue
+    </a>
     <a href="/admin?filter=pending" class="<%= filter === 'pending' ? 'active' : '' %>">Pending</a>
     <a href="/admin?filter=published" class="<%= filter === 'published' ? 'active' : '' %>">Published</a>
   </div>
@@ -78,12 +81,36 @@
       <% letters.forEach(letter => { %>
         <tr>
           <td><%= letter.id %></td>
-          <td>@<%= letter.handle %></td>
+          <td>
+            @<%= letter.handle %>
+            <% if (letter.is_slocialite) { %>
+              <span style="color: var(--muted); font-size: 11px;">[Slocialite]</span>
+            <% } %>
+          </td>
           <td><a href="/letters/<%= letter.id %>"><%= letter.title.slice(0, 50) %></a></td>
-          <td><%= letter.is_published ? 'Published' : 'Pending' %></td>
+          <td>
+            <% if (letter.approval_status === 'pending') { %>
+              <span style="color: #f59e0b;">⏳ Awaiting Review</span>
+            <% } else if (letter.approval_status === 'rejected') { %>
+              <span style="color: #ef4444;">❌ Rejected</span>
+            <% } else if (letter.is_published) { %>
+              <span style="color: #22c55e;">✓ Published</span>
+            <% } else { %>
+              <span>Pending</span>
+            <% } %>
+          </td>
           <td><%= new Date(letter.created_at).toLocaleDateString() %></td>
           <td class="admin-actions">
-            <% if (!letter.is_published) { %>
+            <% if (letter.approval_status === 'pending') { %>
+              <form action="/admin/approve/<%= letter.id %>" method="post" style="display: inline;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                <button class="success">✓ Approve</button>
+              </form>
+              <form action="/admin/reject/<%= letter.id %>" method="post" style="display: inline;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                <button class="danger">✗ Reject</button>
+              </form>
+            <% } else if (!letter.is_published) { %>
               <form action="/admin/publish-now/<%= letter.id %>" method="post">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                 <button class="success">Publish Now</button>

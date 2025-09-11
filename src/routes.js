@@ -47,17 +47,32 @@ function buildRouter(db) {
     const offset = (page - 1) * pageSize;
     const now = dayjs().toISOString();
     
-    // Check if is_draft column exists
+    // Check if is_draft and approval_status columns exist
     let hasDraftColumn = false;
+    let hasApprovalColumn = false;
     try {
       const columns = db.prepare("PRAGMA table_info(letters)").all();
       hasDraftColumn = columns.some(col => col.name === 'is_draft');
+      hasApprovalColumn = columns.some(col => col.name === 'approval_status');
     } catch (e) {
-      console.error('Error checking for is_draft column:', e);
+      console.error('Error checking for columns:', e);
     }
     
-    // Use appropriate query based on whether draft column exists
-    const query = hasDraftColumn ? `
+    // Use appropriate query based on available columns
+    const query = hasApprovalColumn ? `
+      SELECT l.*, u.handle, u.bio, u.avatar_url,
+        (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
+        EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
+        rs.status AS reading_status
+      FROM letters l
+      JOIN users u ON u.id = l.author_id
+      LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
+      WHERE l.is_published = 1 ${hasDraftColumn ? 'AND l.is_draft = 0' : ''} 
+        AND l.publish_at <= @now
+        AND (l.approval_status = 'approved' OR l.approval_status IS NULL)
+      ORDER BY l.publish_at DESC
+      LIMIT @limit OFFSET @offset
+    ` : hasDraftColumn ? `
       SELECT l.*, u.handle, u.bio, u.avatar_url,
         (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
         EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
@@ -589,16 +604,47 @@ function buildRouter(db) {
           const publish_at = dayjs().add(12, 'hour').toISOString();
           const now = dayjs().toISOString();
           
-          // Temporarily use old schema until migration completes
-          const info = db.prepare('INSERT INTO letters (author_id, title, body, publish_at, created_at, is_published) VALUES (?, ?, ?, ?, ?, 0)')
-            .run(req.session.user.id, title, body, publish_at, now);
+          // Check if user is a slocialite (needs approval)
+          const user = db.prepare('SELECT is_slocialite FROM users WHERE id = ?').get(req.session.user.id);
+          const needsApproval = user?.is_slocialite === 1;
+          
+          // Check if approval_status column exists
+          let hasApprovalColumn = false;
+          try {
+            const columns = db.prepare("PRAGMA table_info(letters)").all();
+            hasApprovalColumn = columns.some(col => col.name === 'approval_status');
+          } catch (e) {
+            // Column might not exist yet
+          }
+          
+          let info;
+          if (hasApprovalColumn && needsApproval) {
+            // Insert with pending status for slocialites
+            info = db.prepare('INSERT INTO letters (author_id, title, body, publish_at, created_at, is_published, approval_status) VALUES (?, ?, ?, ?, ?, 0, ?)')
+              .run(req.session.user.id, title, body, publish_at, now, 'pending');
+          } else {
+            // Regular user or old schema - insert normally
+            info = db.prepare('INSERT INTO letters (author_id, title, body, publish_at, created_at, is_published) VALUES (?, ?, ?, ?, ?, 0)')
+              .run(req.session.user.id, title, body, publish_at, now);
+          }
           
           eventTracker.track('letter_create', {
             userId: req.session.user.id,
             sessionId: req.sessionID,
             letterId: info.lastInsertRowid,
-            metadata: { title: title.slice(0, 50), wordCount: body.split(/\s+/).length }
+            metadata: { title: title.slice(0, 50), wordCount: body.split(/\s+/).length, needsApproval }
           });
+          
+          if (needsApproval && hasApprovalColumn) {
+            return res.render('compose', { 
+              user: req.session.user, 
+              errors: [], 
+              values: {}, 
+              pageClass: 'compose',
+              message: 'Your letter has been submitted for review. It will be published after approval.'
+            });
+          }
+          
           res.redirect(`/letters/${info.lastInsertRowid}`);
         } catch (error) {
           console.error('Error publishing letter:', error);
@@ -824,16 +870,27 @@ function buildRouter(db) {
   router.get('/admin', requireAdmin, (req, res) => {
     const filter = req.query.filter || 'all';
     
+    // Check if approval_status column exists
+    let hasApprovalColumn = false;
+    try {
+      const columns = db.prepare("PRAGMA table_info(letters)").all();
+      hasApprovalColumn = columns.some(col => col.name === 'approval_status');
+    } catch (e) {
+      // Column might not exist yet
+    }
+    
     // Get letters based on filter
     let lettersQuery = `
-      SELECT l.*, u.handle, 
+      SELECT l.*, u.handle, u.is_slocialite,
         (SELECT COUNT(*) FROM comments WHERE letter_id = l.id) as comment_count,
         (SELECT COUNT(*) FROM resonates WHERE letter_id = l.id) as resonate_count
       FROM letters l 
       JOIN users u ON u.id = l.author_id 
     `;
     
-    if (filter === 'pending') {
+    if (filter === 'moderation' && hasApprovalColumn) {
+      lettersQuery += ` WHERE l.approval_status = 'pending' `;
+    } else if (filter === 'pending') {
       lettersQuery += ' WHERE l.is_published = 0 ';
     } else if (filter === 'published') {
       lettersQuery += ' WHERE l.is_published = 1 ';
@@ -904,6 +961,76 @@ function buildRouter(db) {
     // Add random string to email to effectively ban them
     db.prepare('UPDATE users SET email = email || "_banned_" || ? WHERE id = ?').run(Date.now(), id);
     res.redirect('/admin');
+  });
+
+  // Approve a letter from slocialite
+  router.post('/admin/approve/:id', requireAdmin, (req, res) => {
+    const id = Number(req.params.id);
+    const now = dayjs().toISOString();
+    
+    // Check if approval columns exist
+    let hasApprovalColumns = false;
+    try {
+      const columns = db.prepare("PRAGMA table_info(letters)").all();
+      hasApprovalColumns = columns.some(col => col.name === 'approval_status');
+    } catch (e) {
+      // Columns might not exist yet
+    }
+    
+    if (hasApprovalColumns) {
+      db.prepare(`
+        UPDATE letters 
+        SET approval_status = 'approved', 
+            approved_by = ?, 
+            approved_at = ?
+        WHERE id = ?
+      `).run(req.session.user.id, now, id);
+      
+      eventTracker.track('letter_approved', {
+        userId: req.session.user.id,
+        sessionId: req.sessionID,
+        letterId: id,
+        metadata: { action: 'approve' }
+      });
+    }
+    
+    res.redirect('/admin?filter=moderation');
+  });
+
+  // Reject a letter from slocialite
+  router.post('/admin/reject/:id', requireAdmin, (req, res) => {
+    const id = Number(req.params.id);
+    const now = dayjs().toISOString();
+    const reason = req.body.reason || 'Does not meet community guidelines';
+    
+    // Check if approval columns exist
+    let hasApprovalColumns = false;
+    try {
+      const columns = db.prepare("PRAGMA table_info(letters)").all();
+      hasApprovalColumns = columns.some(col => col.name === 'approval_status');
+    } catch (e) {
+      // Columns might not exist yet
+    }
+    
+    if (hasApprovalColumns) {
+      db.prepare(`
+        UPDATE letters 
+        SET approval_status = 'rejected', 
+            approved_by = ?, 
+            approved_at = ?,
+            rejection_reason = ?
+        WHERE id = ?
+      `).run(req.session.user.id, now, reason, id);
+      
+      eventTracker.track('letter_rejected', {
+        userId: req.session.user.id,
+        sessionId: req.sessionID,
+        letterId: id,
+        metadata: { action: 'reject', reason }
+      });
+    }
+    
+    res.redirect('/admin?filter=moderation');
   });
 
   // 404 handler - track not found pages

@@ -65,6 +65,64 @@ try {
   console.error('Migration error:', e);
 }
 
+// Run migration for slocialite features (v3)
+console.log('Checking for slocialite features...');
+try {
+  // Add is_slocialite column to users table
+  const userColumns = db.prepare("PRAGMA table_info(users)").all();
+  const hasIsSlocialite = userColumns.some(col => col.name === 'is_slocialite');
+  
+  if (!hasIsSlocialite) {
+    console.log('Adding is_slocialite column to users table...');
+    db.prepare('ALTER TABLE users ADD COLUMN is_slocialite INTEGER NOT NULL DEFAULT 0').run();
+    console.log('✓ is_slocialite column added');
+  }
+  
+  // Add approval columns to letters table
+  const letterColumns = db.prepare("PRAGMA table_info(letters)").all();
+  const hasApprovalStatus = letterColumns.some(col => col.name === 'approval_status');
+  const hasApprovedBy = letterColumns.some(col => col.name === 'approved_by');
+  const hasApprovedAt = letterColumns.some(col => col.name === 'approved_at');
+  const hasRejectionReason = letterColumns.some(col => col.name === 'rejection_reason');
+  
+  if (!hasApprovalStatus) {
+    console.log('Adding approval_status column to letters table...');
+    db.prepare(`ALTER TABLE letters ADD COLUMN approval_status TEXT NOT NULL DEFAULT 'approved' CHECK(approval_status IN ('pending', 'approved', 'rejected'))`).run();
+    console.log('✓ approval_status column added');
+  }
+  
+  if (!hasApprovedBy) {
+    console.log('Adding approved_by column to letters table...');
+    db.prepare('ALTER TABLE letters ADD COLUMN approved_by INTEGER REFERENCES users(id)').run();
+    console.log('✓ approved_by column added');
+  }
+  
+  if (!hasApprovedAt) {
+    console.log('Adding approved_at column to letters table...');
+    db.prepare('ALTER TABLE letters ADD COLUMN approved_at TEXT').run();
+    console.log('✓ approved_at column added');
+  }
+  
+  if (!hasRejectionReason) {
+    console.log('Adding rejection_reason column to letters table...');
+    db.prepare('ALTER TABLE letters ADD COLUMN rejection_reason TEXT').run();
+    console.log('✓ rejection_reason column added');
+  }
+  
+  // Create index for moderation queue
+  try {
+    db.prepare('CREATE INDEX idx_letters_moderation ON letters(approval_status, created_at DESC)').run();
+    console.log('✓ Moderation index created');
+  } catch (e) {
+    // Index might already exist, that's ok
+  }
+  
+  console.log('Slocialite features check complete');
+} catch (err) {
+  console.error('Slocialite migration error:', err);
+  // Continue anyway
+}
+
 // Auto-create default admin on first run
 const { execSync } = require('child_process');
 try {
