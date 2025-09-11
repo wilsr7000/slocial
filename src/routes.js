@@ -208,7 +208,7 @@ function buildRouter(db) {
     res.render('principles', { user: req.session.user });
   });
 
-  router.get('/signup', (req, res) => res.render('signup', { user: req.session.user, errors: [], values: {} }));
+  router.get('/signup', (req, res) => res.render('signup', { user: req.session.user, errors: [], values: {}, pageClass: 'auth' }));
   router.post('/signup',
     body('handle').isLength({ min: 3, max: 20 }).isAlphanumeric().withMessage('Handle must be alphanumeric 3-20'),
     body('email').isEmail(),
@@ -216,7 +216,7 @@ function buildRouter(db) {
     (req, res) => {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        return res.status(400).render('signup', { user: req.session.user, errors: errors.array(), values: req.body });
+        return res.status(400).render('signup', { user: req.session.user, errors: errors.array(), values: req.body, pageClass: 'auth' });
       }
       const { handle, email, password } = req.body;
       const password_hash = bcrypt.hashSync(password, 12);
@@ -233,22 +233,22 @@ function buildRouter(db) {
       res.redirect('/');
       } catch (e) {
         const msg = /UNIQUE/.test(e.message) ? 'Handle or email already taken' : 'Signup failed';
-        res.status(400).render('signup', { user: req.session.user, errors: [{ msg }], values: req.body });
+        res.status(400).render('signup', { user: req.session.user, errors: [{ msg }], values: req.body, pageClass: 'auth' });
       }
     }
   );
 
-  router.get('/login', (req, res) => res.render('login', { user: req.session.user, errors: [], values: {} }));
+  router.get('/login', (req, res) => res.render('login', { user: req.session.user, errors: [], values: {}, pageClass: 'auth' }));
   router.post('/login',
     body('email').isEmail(),
     body('password').isLength({ min: 8 }),
     (req, res) => {
       const errors = validationResult(req);
-      if (!errors.isEmpty()) return res.status(400).render('login', { user: req.session.user, errors: errors.array(), values: req.body });
+      if (!errors.isEmpty()) return res.status(400).render('login', { user: req.session.user, errors: errors.array(), values: req.body, pageClass: 'auth' });
       const { email, password } = req.body;
       const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
       if (!user || !bcrypt.compareSync(password, user.password_hash)) {
-        return res.status(401).render('login', { user: req.session.user, errors: [{ msg: 'Invalid credentials' }], values: req.body });
+        return res.status(401).render('login', { user: req.session.user, errors: [{ msg: 'Invalid credentials' }], values: req.body, pageClass: 'auth' });
       }
       req.session.user = { id: user.id, handle: user.handle, email: user.email, is_admin: user.is_admin === 1 };
       eventTracker.track('login', {
