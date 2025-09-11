@@ -36,13 +36,42 @@
     <p class="empty">No letters yet. Come back later.</p>
   <% } %>
   <% letters.forEach(letter => { %>
-    <article class="letter <%= letter.is_slocialite === 0 ? 'author-letter' : '' %>">
-      <h2><a href="/letters/<%= letter.id %>"><%= letter.title %></a></h2>
-      <div class="meta"><%= new Date(letter.publish_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></div>
-      <p><%= letter.body.slice(0, 260) %><% if (letter.body.length > 260) { %>…<% } %></p>
-      
-      <!-- Author section -->
-      <div class="feed-author">
+    <article class="letter <%= letter.is_slocialite === 0 ? 'author-letter' : '' %> <%= letter.reading_status === 'later' ? 'letter-collapsed' : '' %>" data-letter-id="<%= letter.id %>">
+      <% if (letter.reading_status === 'later') { %>
+        <!-- Collapsed view for saved letters -->
+        <div class="letter-saved-header">
+          <div class="saved-indicator">
+            <span class="hourglass-icon">⏳</span>
+            <span class="saved-label">Saved for later</span>
+          </div>
+          <h3 class="saved-title">
+            <a href="/letters/<%= letter.id %>"><%= letter.title %></a>
+          </h3>
+          <div class="saved-meta">
+            <span class="author-name">@<%= letter.handle %></span>
+            <span class="separator">•</span>
+            <span class="date"><%= new Date(letter.publish_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></span>
+            <button class="expand-btn" onclick="toggleLetterExpand(<%= letter.id %>)">
+              <span class="expand-icon">▼</span> Expand
+            </button>
+          </div>
+        </div>
+        
+        <!-- Hidden full content (can be expanded) -->
+        <div class="letter-full-content" style="display: none;">
+          <p><%= letter.body.slice(0, 260) %><% if (letter.body.length > 260) { %>…<% } %></p>
+          
+          <!-- Author section -->
+          <div class="feed-author">
+      <% } else { %>
+        <!-- Normal view for other letters -->
+        <h2><a href="/letters/<%= letter.id %>"><%= letter.title %></a></h2>
+        <div class="meta"><%= new Date(letter.publish_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></div>
+        <p><%= letter.body.slice(0, 260) %><% if (letter.body.length > 260) { %>…<% } %></p>
+        
+        <!-- Author section -->
+        <div class="feed-author">
+      <% } %>
         <div class="feed-author-avatar <%= letter.is_slocialite === 0 ? 'author-avatar' : '' %>">
           <% if (letter.avatar_url) { %>
             <img src="<%= letter.avatar_url %>" alt="<%= letter.handle %>" onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\"font-size:16px\">👤</span>';">
@@ -62,8 +91,11 @@
           <% } %>
         </div>
       </div>
+      <% if (letter.reading_status === 'later') { %>
+        </div>
+      <% } %>
       
-      <div class="actions">
+      <div class="actions <%= letter.reading_status === 'later' ? 'saved-actions' : '' %>">
         <% if (user) { %>
           <div class="reading-actions">
             <% if (letter.reading_status === 'read') { %>
@@ -137,6 +169,25 @@ let currentPage = 1;
 let isLoading = false;
 let hasMoreLetters = true;
 const isLoggedIn = <%= !!user %>;
+
+function toggleLetterExpand(letterId) {
+  const article = document.querySelector(`article[data-letter-id="${letterId}"]`);
+  const fullContent = article.querySelector('.letter-full-content');
+  const expandBtn = article.querySelector('.expand-btn');
+  const expandIcon = expandBtn.querySelector('.expand-icon');
+  
+  if (fullContent.style.display === 'none') {
+    fullContent.style.display = 'block';
+    expandIcon.textContent = '▲';
+    expandBtn.innerHTML = '<span class="expand-icon">▲</span> Collapse';
+    article.classList.remove('letter-collapsed');
+  } else {
+    fullContent.style.display = 'none';
+    expandIcon.textContent = '▼';
+    expandBtn.innerHTML = '<span class="expand-icon">▼</span> Expand';
+    article.classList.add('letter-collapsed');
+  }
+}
 
 function updateReadingStatus(letterId, status) {
   fetch(`/letters/${letterId}/status`, {
