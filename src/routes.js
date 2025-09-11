@@ -375,10 +375,13 @@ function buildRouter(db) {
   
   // Drafts routes
   router.get('/drafts', requireAuth, (req, res) => {
+    // Temporarily show unpublished letters with future dates as drafts
     const drafts = db.prepare(`
       SELECT * FROM letters 
-      WHERE author_id = ? AND is_draft = 1 
-      ORDER BY last_saved_at DESC, created_at DESC
+      WHERE author_id = ? 
+        AND is_published = 0 
+        AND publish_at > datetime('now', '+12 hours')
+      ORDER BY created_at DESC
     `).all(req.session.user.id);
     
     const saved = req.query.saved;
@@ -394,16 +397,20 @@ function buildRouter(db) {
     const draftId = req.params.id;
     const now = dayjs();
     
-    // Verify ownership
-    const draft = db.prepare('SELECT * FROM letters WHERE id = ? AND author_id = ? AND is_draft = 1')
-      .get(draftId, req.session.user.id);
+    // Verify ownership (temporarily check unpublished letters)
+    const draft = db.prepare(`
+      SELECT * FROM letters 
+      WHERE id = ? 
+        AND author_id = ? 
+        AND is_published = 0
+    `).get(draftId, req.session.user.id);
     
     if (!draft) {
       return res.status(404).send('Draft not found');
     }
     
     // Check 24-hour limit
-    const lastPublished = db.prepare('SELECT created_at FROM letters WHERE author_id = ? AND is_draft = 0 ORDER BY created_at DESC LIMIT 1')
+    const lastPublished = db.prepare('SELECT created_at FROM letters WHERE author_id = ? ORDER BY created_at DESC LIMIT 1')
       .get(req.session.user.id);
     
     if (lastPublished && dayjs(lastPublished.created_at).isAfter(now.subtract(24, 'hour'))) {
@@ -414,7 +421,7 @@ function buildRouter(db) {
     const publish_at = now.add(12, 'hour').toISOString();
     db.prepare(`
       UPDATE letters 
-      SET is_draft = 0, publish_at = ?, last_saved_at = NULL
+      SET publish_at = ?
       WHERE id = ?
     `).run(publish_at, draftId);
     
@@ -432,9 +439,14 @@ function buildRouter(db) {
   router.post('/drafts/:id/delete', requireAuth, (req, res) => {
     const draftId = req.params.id;
     
-    // Verify ownership and delete
-    const result = db.prepare('DELETE FROM letters WHERE id = ? AND author_id = ? AND is_draft = 1')
-      .run(draftId, req.session.user.id);
+    // Verify ownership and delete (temporarily delete unpublished letters)
+    const result = db.prepare(`
+      DELETE FROM letters 
+      WHERE id = ? 
+        AND author_id = ? 
+        AND is_published = 0
+        AND publish_at > datetime('now', '+12 hours')
+    `).run(draftId, req.session.user.id);
     
     if (result.changes === 0) {
       return res.status(404).send('Draft not found');
@@ -450,8 +462,14 @@ function buildRouter(db) {
   });
   
   router.get('/compose/draft/:id', requireAuth, (req, res) => {
-    const draft = db.prepare('SELECT * FROM letters WHERE id = ? AND author_id = ? AND is_draft = 1')
-      .get(req.params.id, req.session.user.id);
+    // Temporarily check for unpublished letters as drafts
+    const draft = db.prepare(`
+      SELECT * FROM letters 
+      WHERE id = ? 
+        AND author_id = ? 
+        AND is_published = 0
+        AND publish_at > datetime('now', '+12 hours')
+    `).get(req.params.id, req.session.user.id);
     
     if (!draft) {
       return res.status(404).send('Draft not found');
@@ -474,9 +492,13 @@ function buildRouter(db) {
       const draftId = req.params.id;
       const now = dayjs();
       
-      // Verify ownership
-      const draft = db.prepare('SELECT * FROM letters WHERE id = ? AND author_id = ? AND is_draft = 1')
-        .get(draftId, req.session.user.id);
+      // Verify ownership (temporarily check unpublished letters)
+      const draft = db.prepare(`
+        SELECT * FROM letters 
+        WHERE id = ? 
+          AND author_id = ? 
+          AND is_published = 0
+      `).get(draftId, req.session.user.id);
       
       if (!draft) {
         return res.status(404).send('Draft not found');
@@ -486,9 +508,9 @@ function buildRouter(db) {
         // Update draft
         db.prepare(`
           UPDATE letters 
-          SET title = ?, body = ?, last_saved_at = ?
+          SET title = ?, body = ?
           WHERE id = ?
-        `).run(title, body, now.toISOString(), draftId);
+        `).run(title, body, draftId);
         
         return res.redirect(`/compose/draft/${draftId}?saved=true`);
       } else {
@@ -496,7 +518,7 @@ function buildRouter(db) {
         const publish_at = now.add(12, 'hour').toISOString();
         db.prepare(`
           UPDATE letters 
-          SET title = ?, body = ?, is_draft = 0, publish_at = ?, last_saved_at = NULL
+          SET title = ?, body = ?, publish_at = ?
           WHERE id = ?
         `).run(title, body, publish_at, draftId);
         
