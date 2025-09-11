@@ -207,8 +207,8 @@ function buildRouter(db) {
       
       if (!draftId) {
         // Create new draft
-        const result = db.prepare('INSERT INTO letters (author_id, title, body, is_draft, last_saved_at, created_at, publish_at, is_published) VALUES (?, ?, ?, 1, ?, ?, ?, 0)')
-          .run(userId, title, body, now, now, now, 0);
+        const result = db.prepare('INSERT INTO letters (author_id, title, body, format, is_draft, last_saved_at, created_at, publish_at, is_published) VALUES (?, ?, ?, ?, 1, ?, ?, ?, 0)')
+          .run(userId, title, body, 'standard', now, now, now, 0);
         draftId = result.lastInsertRowid;
       }
       
@@ -570,19 +570,20 @@ function buildRouter(db) {
       const errors = validationResult(req);
       if (!errors.isEmpty()) return res.status(400).render('compose', { user: req.session.user, errors: errors.array(), values: req.body, pageClass: 'compose' });
 
-      const { title, body, action } = req.body;
+      const { title, body, action, format = 'standard' } = req.body;
       const now = dayjs();
       
       if (action === 'draft') {
         // Save as draft (temporarily as unpublished letter until migration completes)
         try {
           const info = db.prepare(`
-            INSERT INTO letters (author_id, title, body, publish_at, created_at, is_published) 
-            VALUES (?, ?, ?, ?, ?, 0)
+            INSERT INTO letters (author_id, title, body, format, publish_at, created_at, is_published) 
+            VALUES (?, ?, ?, ?, ?, ?, 0)
           `).run(
             req.session.user.id, 
             title, 
-            body, 
+            body,
+            format,
             now.add(24, 'hour').toISOString(), // Set far future for draft
             now.toISOString()
           );
@@ -633,12 +634,12 @@ function buildRouter(db) {
           let info;
           if (hasApprovalColumn && needsApproval) {
             // Insert with pending status for slocialites
-            info = db.prepare('INSERT INTO letters (author_id, title, body, publish_at, created_at, is_published, approval_status) VALUES (?, ?, ?, ?, ?, 0, ?)')
-              .run(req.session.user.id, title, body, publish_at, now, 'pending');
+            info = db.prepare('INSERT INTO letters (author_id, title, body, format, publish_at, created_at, is_published, approval_status) VALUES (?, ?, ?, ?, ?, ?, 0, ?)')
+              .run(req.session.user.id, title, body, format, publish_at, now, 'pending');
           } else {
             // Regular user or old schema - insert normally
-            info = db.prepare('INSERT INTO letters (author_id, title, body, publish_at, created_at, is_published) VALUES (?, ?, ?, ?, ?, 0)')
-              .run(req.session.user.id, title, body, publish_at, now);
+            info = db.prepare('INSERT INTO letters (author_id, title, body, format, publish_at, created_at, is_published) VALUES (?, ?, ?, ?, ?, ?, 0)')
+              .run(req.session.user.id, title, body, format, publish_at, now);
           }
           
           eventTracker.track('letter_create', {

@@ -84,6 +84,7 @@ try {
   const hasApprovedBy = letterColumns.some(col => col.name === 'approved_by');
   const hasApprovedAt = letterColumns.some(col => col.name === 'approved_at');
   const hasRejectionReason = letterColumns.some(col => col.name === 'rejection_reason');
+  const hasFormat = letterColumns.some(col => col.name === 'format');
   
   if (!hasApprovalStatus) {
     console.log('Adding approval_status column to letters table...');
@@ -107,6 +108,12 @@ try {
     console.log('Adding rejection_reason column to letters table...');
     db.prepare('ALTER TABLE letters ADD COLUMN rejection_reason TEXT').run();
     console.log('✓ rejection_reason column added');
+  }
+  
+  if (!hasFormat) {
+    console.log('Adding format column to letters table...');
+    db.prepare(`ALTER TABLE letters ADD COLUMN format TEXT DEFAULT 'standard'`).run();
+    console.log('✓ format column added for writing constraints');
   }
   
   // Create index for moderation queue

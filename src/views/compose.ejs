@@ -32,6 +32,87 @@
     100% { opacity: 0; }
   }
   
+  /* Format selector - minimal and clean */
+  .format-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e5e5e5;
+    opacity: 0;
+    animation: fadeIn 0.8s ease forwards;
+    animation-delay: 0.5s;
+  }
+  
+  .format-option {
+    font-size: 13px;
+    color: #999;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    padding: 4px 0;
+  }
+  
+  .format-option:hover {
+    color: #666;
+  }
+  
+  .format-option.active {
+    color: #333;
+    font-weight: 500;
+  }
+  
+  .format-option.active::after {
+    content: '';
+    position: absolute;
+    bottom: -21px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #333;
+  }
+  
+  .format-detail {
+    font-size: 11px;
+    opacity: 0.6;
+    margin-left: 2px;
+  }
+  
+  /* Constraint indicator */
+  .constraint-counter {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    font-size: 12px;
+    color: #999;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px 12px;
+    border-radius: 20px;
+    border: 1px solid #e5e5e5;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+  }
+  
+  .constraint-counter.visible {
+    opacity: 1;
+  }
+  
+  .constraint-counter.warning {
+    color: #f59e0b;
+    border-color: #f59e0b;
+  }
+  
+  .constraint-counter.error {
+    color: #ef4444;
+    border-color: #ef4444;
+  }
+  
+  .constraint-counter.success {
+    color: #22c55e;
+    border-color: #22c55e;
+  }
+  
   .surface-title {
     font-size: 14px;
     font-weight: 400;
@@ -373,14 +454,35 @@
 <body class="writing-surface">
   <div class="focus-indicator"></div>
   <div class="saved-indicator" id="saved-indicator">Draft saved</div>
+  <div class="constraint-counter" id="constraint-counter"></div>
   
   <div class="writing-container" id="writing-container">
     <div class="writing-header">
       <p class="surface-title">WRITING SURFACE</p>
     </div>
     
+    <!-- Minimal format selector -->
+    <div class="format-row" id="format-row">
+      <span class="format-option active" data-format="standard" onclick="selectFormat('standard')">
+        Standard
+      </span>
+      <span class="format-option" data-format="haiku" onclick="selectFormat('haiku')">
+        Haiku <span class="format-detail">17</span>
+      </span>
+      <span class="format-option" data-format="sixword" onclick="selectFormat('sixword')">
+        Six Words
+      </span>
+      <span class="format-option" data-format="flash" onclick="selectFormat('flash')">
+        Flash <span class="format-detail">100</span>
+      </span>
+      <span class="format-option" data-format="question" onclick="selectFormat('question')">
+        Question
+      </span>
+    </div>
+    
     <form method="post" id="compose-form">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <input type="hidden" name="format" id="format-input" value="standard" />
       
       <textarea 
         name="title"
@@ -498,6 +600,118 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 <script>
+  // Format constraints
+  const formatConstraints = {
+    standard: { maxWords: null, maxChars: null, exact: null },
+    haiku: { syllables: 17, lines: 3, pattern: [5, 7, 5] },
+    sixword: { exactWords: 6 },
+    flash: { maxWords: 100 },
+    question: { endsWithQuestion: true }
+  };
+
+  let currentFormat = 'standard';
+
+  // Format selection
+  function selectFormat(format) {
+    currentFormat = format;
+    
+    // Update UI
+    document.querySelectorAll('.format-option').forEach(opt => {
+      opt.classList.remove('active');
+    });
+    document.querySelector(`[data-format="${format}"]`).classList.add('active');
+    document.getElementById('format-input').value = format;
+    
+    // Update counter
+    updateConstraintCounter();
+    
+    // Show/hide title for certain formats
+    const titleInput = document.getElementById('title-input');
+    if (format === 'haiku' || format === 'sixword') {
+      titleInput.style.opacity = '0.3';
+      titleInput.placeholder = 'Optional for this format';
+    } else {
+      titleInput.style.opacity = '1';
+      titleInput.placeholder = 'Title';
+    }
+  }
+
+  // Count syllables (simple approximation)
+  function countSyllables(text) {
+    text = text.toLowerCase();
+    let count = 0;
+    let previousWasVowel = false;
+    
+    for (let i = 0; i < text.length; i++) {
+      const isVowel = 'aeiouy'.includes(text[i]);
+      if (isVowel && !previousWasVowel) {
+        count++;
+      }
+      previousWasVowel = isVowel;
+    }
+    
+    // Adjust for silent e
+    if (text.endsWith('e')) count--;
+    
+    // Ensure at least 1 syllable per word
+    const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+    return Math.max(count, words.length);
+  }
+
+  // Update constraint counter
+  function updateConstraintCounter() {
+    const counter = document.getElementById('constraint-counter');
+    const bodyInput = document.getElementById('body-input');
+    const text = bodyInput.value.trim();
+    
+    if (currentFormat === 'standard') {
+      counter.classList.remove('visible');
+      return;
+    }
+    
+    counter.classList.add('visible');
+    let message = '';
+    let status = 'normal';
+    
+    switch(currentFormat) {
+      case 'haiku':
+        const syllableCount = countSyllables(text);
+        message = `${syllableCount}/17 syllables`;
+        if (syllableCount === 17) status = 'success';
+        else if (syllableCount > 17) status = 'error';
+        else if (syllableCount > 14) status = 'warning';
+        break;
+        
+      case 'sixword':
+        const wordCount = text ? text.split(/\s+/).length : 0;
+        message = `${wordCount}/6 words`;
+        if (wordCount === 6) status = 'success';
+        else if (wordCount > 6) status = 'error';
+        else if (wordCount >= 4) status = 'warning';
+        break;
+        
+      case 'flash':
+        const flashWords = text ? text.split(/\s+/).length : 0;
+        message = `${flashWords}/100 words`;
+        if (flashWords <= 100 && flashWords > 50) status = 'success';
+        else if (flashWords > 100) status = 'error';
+        else if (flashWords > 90) status = 'warning';
+        break;
+        
+      case 'question':
+        const endsWithQ = text.endsWith('?');
+        message = endsWithQ ? '✓ Ends with ?' : 'Must end with ?';
+        status = endsWithQ ? 'success' : (text.length > 10 ? 'warning' : 'normal');
+        break;
+    }
+    
+    counter.textContent = message;
+    counter.className = 'constraint-counter visible';
+    if (status !== 'normal') {
+      counter.classList.add(status);
+    }
+  }
+
   const titleInput = document.getElementById('title-input');
   const bodyInput = document.getElementById('body-input');
   const wordCount = document.getElementById('word-count');
@@ -537,6 +751,7 @@
   
   bodyInput.addEventListener('input', () => {
     updateWordCount();
+    updateConstraintCounter();
     scheduleAutoSave();
   });
   updateWordCount();

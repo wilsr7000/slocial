@@ -65,7 +65,12 @@
           <div class="feed-author">
       <% } else { %>
         <!-- Normal view for other letters -->
-        <h2><a href="/letters/<%= letter.id %>"><%= letter.title %></a></h2>
+        <h2>
+          <a href="/letters/<%= letter.id %>"><%= letter.title %></a>
+          <% if (letter.format && letter.format !== 'standard') { %>
+            <span class="format-badge format-<%= letter.format %>"><%= letter.format %></span>
+          <% } %>
+        </h2>
         <div class="meta"><%= new Date(letter.publish_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></div>
         <p><%= letter.body.slice(0, 260) %><% if (letter.body.length > 260) { %>…<% } %></p>
         
