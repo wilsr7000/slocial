@@ -1,11 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Slocial</title>
     <link rel="stylesheet" href="/static/css/styles.css" />
     <link rel="icon" href="data:," />
+    <script>
+      // Check for saved theme preference or default to 'light'
+      const theme = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', theme);
+    </script>
   </head>
   <body class="<%= (typeof pageClass !== 'undefined') ? pageClass : '' %>">
     <%- include('partials_nav') %>
@@ -26,6 +31,35 @@
         </nav>
       </div>
     </footer>
+    <script>
+      function toggleTheme() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        
+        html.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        
+        // Update button text
+        const toggleBtn = document.querySelector('.theme-toggle');
+        if (toggleBtn) {
+          toggleBtn.innerHTML = newTheme === 'light' 
+            ? '<span class="theme-icon">🌙</span> Dark' 
+            : '<span class="theme-icon">☀️</span> Light';
+        }
+      }
+      
+      // Initialize button text on load
+      document.addEventListener('DOMContentLoaded', () => {
+        const toggleBtn = document.querySelector('.theme-toggle');
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (toggleBtn) {
+          toggleBtn.innerHTML = currentTheme === 'light' 
+            ? '<span class="theme-icon">🌙</span> Dark' 
+            : '<span class="theme-icon">☀️</span> Light';
+        }
+      });
+    </script>
   </body>
 </html>
 
