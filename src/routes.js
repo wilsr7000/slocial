@@ -524,35 +524,18 @@ function buildRouter(db) {
       const now = dayjs();
       
       if (action === 'draft') {
-        // Save as draft
+        // Save as draft (temporarily as unpublished letter until migration completes)
         try {
-          let info;
-          try {
-            // Try with is_draft column (new schema)
-            info = db.prepare(`
-              INSERT INTO letters (author_id, title, body, is_draft, publish_at, last_saved_at, created_at, is_published) 
-              VALUES (?, ?, ?, 1, ?, ?, ?, 0)
-            `).run(
-              req.session.user.id, 
-              title, 
-              body, 
-              now.add(12, 'hour').toISOString(), // Default publish time
-              now.toISOString(),
-              now.toISOString()
-            );
-          } catch (e) {
-            // Fallback for old schema - save as regular letter but unpublished
-            info = db.prepare(`
-              INSERT INTO letters (author_id, title, body, publish_at, created_at, is_published) 
-              VALUES (?, ?, ?, ?, ?, 0)
-            `).run(
-              req.session.user.id, 
-              title, 
-              body, 
-              now.add(24, 'hour').toISOString(), // Set far future for draft
-              now.toISOString()
-            );
-          }
+          const info = db.prepare(`
+            INSERT INTO letters (author_id, title, body, publish_at, created_at, is_published) 
+            VALUES (?, ?, ?, ?, ?, 0)
+          `).run(
+            req.session.user.id, 
+            title, 
+            body, 
+            now.add(24, 'hour').toISOString(), // Set far future for draft
+            now.toISOString()
+          );
         
           eventTracker.track('draft_save', {
             userId: req.session.user.id,
@@ -573,17 +556,9 @@ function buildRouter(db) {
         }
       } else {
         // Publish (queue for publishing)
-        // Enforce 1 letter per 24h (drafts don't count)
-        let last;
-        try {
-          // Try with is_draft column (new schema)
-          last = db.prepare('SELECT created_at FROM letters WHERE author_id = ? AND is_draft = 0 ORDER BY created_at DESC LIMIT 1')
-            .get(req.session.user.id);
-        } catch (e) {
-          // Fallback for old schema without is_draft column
-          last = db.prepare('SELECT created_at FROM letters WHERE author_id = ? ORDER BY created_at DESC LIMIT 1')
-            .get(req.session.user.id);
-        }
+        // Enforce 1 letter per 24h (temporarily disabled draft check until migration completes)
+        const last = db.prepare('SELECT created_at FROM letters WHERE author_id = ? ORDER BY created_at DESC LIMIT 1')
+          .get(req.session.user.id);
         if (last && dayjs(last.created_at).isAfter(dayjs().subtract(24, 'hour'))) {
           return res.status(429).render('compose', { user: req.session.user, errors: [{ msg: 'You can only publish once every 24 hours.' }], values: req.body, pageClass: 'compose' });
         }
@@ -592,17 +567,9 @@ function buildRouter(db) {
           const publish_at = dayjs().add(12, 'hour').toISOString();
           const now = dayjs().toISOString();
           
-          // Check if is_draft column exists
-          let info;
-          try {
-            // Try with is_draft column (new schema)
-            info = db.prepare('INSERT INTO letters (author_id, title, body, publish_at, created_at, is_published, is_draft) VALUES (?, ?, ?, ?, ?, 0, 0)')
-              .run(req.session.user.id, title, body, publish_at, now);
-          } catch (e) {
-            // Fallback for old schema without is_draft column
-            info = db.prepare('INSERT INTO letters (author_id, title, body, publish_at, created_at, is_published) VALUES (?, ?, ?, ?, ?, 0)')
-              .run(req.session.user.id, title, body, publish_at, now);
-          }
+          // Temporarily use old schema until migration completes
+          const info = db.prepare('INSERT INTO letters (author_id, title, body, publish_at, created_at, is_published) VALUES (?, ?, ?, ?, ?, 0)')
+            .run(req.session.user.id, title, body, publish_at, now);
           
           eventTracker.track('letter_create', {
             userId: req.session.user.id,
