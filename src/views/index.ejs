@@ -36,7 +36,7 @@
     <p class="empty">No letters yet. Come back later.</p>
   <% } %>
   <% letters.forEach(letter => { %>
-    <article class="letter <%= letter.is_slocialite === 0 ? 'author-letter' : '' %> <%= letter.reading_status === 'later' ? 'letter-collapsed' : '' %>" data-letter-id="<%= letter.id %>">
+    <article class="letter <%= letter.reading_status === 'later' ? 'letter-collapsed' : '' %>" data-letter-id="<%= letter.id %>">
       <% if (letter.reading_status === 'later') { %>
         <!-- Collapsed view for saved letters -->
         <div class="letter-saved-header">
