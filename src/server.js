@@ -141,10 +141,45 @@ try {
   // Silent fail if setup-admin has issues
 }
 
+// Helper function for auto-linking URLs in text
+function autoLinkUrls(text) {
+  if (!text) return '';
+  
+  // Escape HTML first
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+  
+  // Then auto-link URLs
+  const urlRegex = /(https?:\/\/[^\s<]+)/g;
+  return escaped.replace(urlRegex, (url) => {
+    // Clean up URL (remove trailing punctuation)
+    let cleanUrl = url;
+    let trailing = '';
+    const match = url.match(/^(.*?)([\.,;:!?\)]+)$/);
+    if (match) {
+      cleanUrl = match[1];
+      trailing = match[2];
+    }
+    
+    // Truncate display text if too long
+    let displayUrl = cleanUrl;
+    if (cleanUrl.length > 30) {
+      displayUrl = cleanUrl.substring(0, 27) + '...';
+    }
+    
+    return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" class="auto-link">${displayUrl}</a>${trailing}`;
+  });
+}
+
 // Inject locals and track events
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.theme = req.cookies?.theme || 'light';
+  res.locals.autoLink = autoLinkUrls; // Make helper available in views
   
   // Track ALL HTTP requests (not just page views)
   const isStaticAsset = req.path.startsWith('/public/') || 

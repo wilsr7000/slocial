@@ -59,7 +59,7 @@
         
         <!-- Hidden full content (can be expanded) -->
         <div class="letter-full-content" style="display: none;">
-          <p><%= letter.body.slice(0, 260) %><% if (letter.body.length > 260) { %>…<% } %></p>
+          <p><%- autoLink(letter.body.slice(0, 260)) %><% if (letter.body.length > 260) { %>…<% } %></p>
           
           <!-- Author section -->
           <div class="feed-author">
@@ -72,7 +72,7 @@
           <% } %>
         </h2>
         <div class="meta"><%= new Date(letter.publish_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></div>
-        <p><%= letter.body.slice(0, 260) %><% if (letter.body.length > 260) { %>…<% } %></p>
+        <p><%- autoLink(letter.body.slice(0, 260)) %><% if (letter.body.length > 260) { %>…<% } %></p>
         
         <!-- Author section -->
         <div class="feed-author">
@@ -175,6 +175,33 @@ let isLoading = false;
 let hasMoreLetters = true;
 const isLoggedIn = <%= !!user %>;
 
+// Auto-link URLs in text
+function autoLink(text) {
+  // Regex to match URLs
+  const urlRegex = /(https?:\/\/[^\s<]+)/g;
+  
+  // Replace URLs with clickable links
+  return text.replace(urlRegex, function(url) {
+    // Truncate display text if URL is too long
+    let displayUrl = url;
+    if (url.length > 30) {
+      displayUrl = url.substring(0, 27) + '...';
+    }
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="auto-link">${displayUrl}</a>`;
+  });
+}
+
+// Escape HTML but preserve links
+function escapeHtmlButPreserveLinks(text) {
+  // First escape HTML entities
+  const div = document.createElement('div');
+  div.textContent = text;
+  const escaped = div.innerHTML;
+  
+  // Then auto-link URLs
+  return autoLink(escaped);
+}
+
 function toggleLetterExpand(letterId) {
   const article = document.querySelector(`article[data-letter-id="${letterId}"]`);
   const fullContent = article.querySelector('.letter-full-content');
@@ -225,7 +252,7 @@ function createLetterHTML(letter) {
     year: 'numeric' 
   });
   
-  const excerpt = letter.body.slice(0, 260) + (letter.body.length > 260 ? '…' : '');
+  const excerpt = escapeHtmlButPreserveLinks(letter.body.slice(0, 260)) + (letter.body.length > 260 ? '…' : '');
   const bio = letter.bio ? (letter.bio.slice(0, 100) + (letter.bio.length > 100 ? '…' : '')) : '';
   
   let actionsHTML = '';

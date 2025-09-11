@@ -197,6 +197,29 @@ button:hover{background:var(--hover-bg)}
   filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.5));
 }
 
+/* Auto-linked URLs in feed */
+.auto-link {
+  color: var(--fg);
+  text-decoration: underline;
+  text-decoration-color: var(--muted);
+  text-underline-offset: 2px;
+  transition: all 0.2s ease;
+}
+
+.auto-link:hover {
+  color: var(--fg);
+  text-decoration-color: var(--fg);
+  opacity: 0.8;
+}
+
+[data-theme="dark"] .auto-link {
+  text-decoration-color: #666;
+}
+
+[data-theme="dark"] .auto-link:hover {
+  text-decoration-color: #999;
+}
+
 /* Format badges */
 .format-badge {
   display: inline-block;
