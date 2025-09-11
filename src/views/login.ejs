@@ -43,7 +43,7 @@
     padding: 12px 20px;
     border: 1px solid var(--border);
     border-radius: 8px;
-    background: white;
+    background: var(--card);
     color: var(--fg);
     text-decoration: none;
     font-weight: 500;
@@ -51,9 +51,9 @@
   }
   
   .oauth-btn:hover {
-    background: #f5f5f5;
+    background: var(--hover-bg);
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px var(--shadow-heavy);
   }
   
   .oauth-btn.google {
@@ -61,13 +61,14 @@
   }
   
   .oauth-btn.apple {
-    border-color: #000;
-    background: #000;
-    color: white;
+    border-color: var(--fg);
+    background: var(--fg);
+    color: var(--bg);
   }
   
   .oauth-btn.apple:hover {
-    background: #333;
+    opacity: 0.9;
+    background: var(--fg);
   }
   
   .oauth-icon {
