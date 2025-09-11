@@ -26,8 +26,6 @@ function initializeDatabase() {
       author_id INTEGER NOT NULL,
       title TEXT NOT NULL,
       body TEXT NOT NULL,
-      is_draft INTEGER NOT NULL DEFAULT 0,
-      last_saved_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       publish_at TEXT NOT NULL,
       is_published INTEGER NOT NULL DEFAULT 0,
@@ -36,7 +34,6 @@ function initializeDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_letters_publish ON letters(is_published, publish_at DESC);
     CREATE INDEX IF NOT EXISTS idx_letters_author ON letters(author_id, created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_letters_drafts ON letters(author_id, is_draft, created_at DESC);
 
     CREATE TABLE IF NOT EXISTS comments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
