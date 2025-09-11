@@ -119,8 +119,18 @@ app.use((req, res, next) => {
       });
     }
     
-    // Track page view timing for GET requests
-    if (req.method === 'GET') {
+    // Track page view timing for GET requests (exclude static assets and API)
+    const shouldTrackPageView = req.method === 'GET' && 
+      !req.path.startsWith('/static/') && 
+      !req.path.startsWith('/api/') &&
+      !req.path.endsWith('.css') &&
+      !req.path.endsWith('.js') &&
+      !req.path.endsWith('.png') &&
+      !req.path.endsWith('.jpg') &&
+      !req.path.endsWith('.ico') &&
+      !req.path.includes('/favicon');
+      
+    if (shouldTrackPageView) {
       const startTime = Date.now();
       eventTracker.startPageView(req.sessionID, req.path);
       
