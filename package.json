@@ -18,6 +18,7 @@
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.2.0",
     "connect-sqlite3": "^0.9.16",
+    "cookie-parser": "^1.4.7",
     "csurf": "^1.11.0",
     "dayjs": "^1.11.18",
     "dompurify": "^3.2.6",

@@ -79,6 +79,7 @@ try {
 // Inject locals and track events
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
+  res.locals.theme = req.cookies?.theme || 'light';
   
   // Track ALL HTTP requests (not just page views)
   const isStaticAsset = req.path.startsWith('/public/') || 

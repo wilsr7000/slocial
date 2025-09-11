@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="<%= typeof theme !== 'undefined' ? theme : 'light' %>">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,9 +7,25 @@
     <link rel="stylesheet" href="/static/css/styles.css" />
     <link rel="icon" href="data:," />
     <script>
-      // Check for saved theme preference or default to 'light'
-      const theme = localStorage.getItem('theme') || 'light';
+      // Check for saved theme preference from cookie, localStorage, or default to 'light'
+      function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return null;
+      }
+      
+      const cookieTheme = getCookie('theme');
+      const localTheme = localStorage.getItem('theme');
+      const theme = cookieTheme || localTheme || 'light';
+      
+      // Set the theme immediately
       document.documentElement.setAttribute('data-theme', theme);
+      
+      // Sync localStorage with cookie if needed
+      if (cookieTheme && cookieTheme !== localTheme) {
+        localStorage.setItem('theme', cookieTheme);
+      }
     </script>
   </head>
   <body class="<%= (typeof pageClass !== 'undefined') ? pageClass : '' %>">
@@ -39,6 +55,11 @@
         
         html.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
+        
+        // Set cookie that expires in 1 year
+        const date = new Date();
+        date.setFullYear(date.getFullYear() + 1);
+        document.cookie = `theme=${newTheme}; path=/; expires=${date.toUTCString()}; SameSite=Lax`;
         
         // Update button text
         const toggleBtn = document.querySelector('.theme-toggle');

@@ -1,4 +1,42 @@
 <style>
+  .logo-container {
+    text-align: center;
+    margin: 40px auto 30px;
+    animation: fadeIn 0.8s ease-in;
+  }
+  
+  .logo-image {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .logo-image:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 6px 30px rgba(0,0,0,0.15);
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  [data-theme="dark"] .logo-image {
+    box-shadow: 0 4px 20px rgba(255,255,255,0.05);
+  }
+  
+  [data-theme="dark"] .logo-image:hover {
+    box-shadow: 0 6px 30px rgba(255,255,255,0.1);
+  }
+  
   .auth-container {
     max-width: 400px;
     margin: 0 auto;
@@ -76,6 +114,10 @@
     height: 20px;
   }
 </style>
+
+<div class="logo-container">
+  <img src="/static/images/slocial.png" alt="Slocial" class="logo-image" />
+</div>
 
 <div class="auth-container">
   <h1>Create account</h1>
