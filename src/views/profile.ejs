@@ -41,14 +41,19 @@
   </div>
 <% } %>
 
-<div class="profile-form">
-  <div class="avatar-preview">
+<div class="profile-form <%= isAuthor ? 'author-profile' : '' %>">
+  <div class="avatar-preview <%= isAuthor ? 'author-avatar-large' : '' %>">
     <% if (profile.avatar_url) { %>
       <img src="<%= profile.avatar_url %>" alt="Avatar" onerror="this.style.display='none'; this.parentElement.innerHTML='👤';">
     <% } else { %>
       <span style="font-size: 48px;">👤</span>
     <% } %>
   </div>
+  <% if (isAuthor) { %>
+    <div style="text-align: center; margin-top: 8px;">
+      <span class="author-status">✨ Verified Author</span>
+    </div>
+  <% } %>
 
   <% if (errors && errors.length) { %>
     <ul class="errors">

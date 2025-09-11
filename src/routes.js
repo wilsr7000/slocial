@@ -60,7 +60,7 @@ function buildRouter(db) {
     
     // Use appropriate query based on available columns
     const query = hasApprovalColumn ? `
-      SELECT l.*, u.handle, u.bio, u.avatar_url,
+      SELECT l.*, u.handle, u.bio, u.avatar_url, u.is_slocialite,
         (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
         EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
         rs.status AS reading_status
@@ -73,7 +73,7 @@ function buildRouter(db) {
       ORDER BY l.publish_at DESC
       LIMIT @limit OFFSET @offset
     ` : hasDraftColumn ? `
-      SELECT l.*, u.handle, u.bio, u.avatar_url,
+      SELECT l.*, u.handle, u.bio, u.avatar_url, u.is_slocialite,
         (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
         EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
         rs.status AS reading_status
@@ -84,7 +84,7 @@ function buildRouter(db) {
       ORDER BY l.publish_at DESC
       LIMIT @limit OFFSET @offset
     ` : `
-      SELECT l.*, u.handle, u.bio, u.avatar_url,
+      SELECT l.*, u.handle, u.bio, u.avatar_url, u.is_slocialite,
         (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
         EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
         rs.status AS reading_status
@@ -133,7 +133,7 @@ function buildRouter(db) {
     
     // Use appropriate query based on whether draft column exists
     const query = hasDraftColumn ? `
-      SELECT l.*, u.handle, u.bio, u.avatar_url,
+      SELECT l.*, u.handle, u.bio, u.avatar_url, u.is_slocialite,
         (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
         EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
         rs.status AS reading_status
@@ -144,7 +144,7 @@ function buildRouter(db) {
       ORDER BY l.publish_at DESC
       LIMIT @limit OFFSET @offset
     ` : `
-      SELECT l.*, u.handle, u.bio, u.avatar_url,
+      SELECT l.*, u.handle, u.bio, u.avatar_url, u.is_slocialite,
         (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
         EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
         rs.status AS reading_status
@@ -376,7 +376,7 @@ function buildRouter(db) {
   // Profile routes
   router.get('/profile', requireAuth, (req, res) => {
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.session.user.id);
-    res.render('profile', { user: req.session.user, profile: user, errors: [] });
+    res.render('profile', { user: req.session.user, profile: user, errors: [], isAuthor: user.is_slocialite === 0 });
   });
 
   router.post('/profile', requireAuth,
@@ -686,13 +686,13 @@ function buildRouter(db) {
     }
     
     const query = hasDraftColumn ? `
-      SELECT l.*, u.handle, u.bio, u.avatar_url,
+      SELECT l.*, u.handle, u.bio, u.avatar_url, u.is_slocialite,
         (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
         EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate
       FROM letters l JOIN users u ON u.id = l.author_id 
       WHERE l.id = @id AND (l.is_draft = 0 OR (l.is_draft = 1 AND l.author_id = @uid))
     ` : `
-      SELECT l.*, u.handle, u.bio, u.avatar_url,
+      SELECT l.*, u.handle, u.bio, u.avatar_url, u.is_slocialite,
         (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
         EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate
       FROM letters l JOIN users u ON u.id = l.author_id 

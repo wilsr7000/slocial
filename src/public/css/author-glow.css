@@ -1,0 +1,53 @@
+/* Author Glow Effects - Separate file for author-specific styles */
+
+/* Profile Pages */
+.profile-form {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* Author profile glow effect */
+.author-profile {
+  position: relative;
+  padding: 32px;
+  background: linear-gradient(135deg, var(--card) 0%, var(--card) 100%);
+  border-radius: 12px;
+  box-shadow: 
+    0 0 30px rgba(255, 215, 0, 0.1),
+    0 0 60px rgba(255, 215, 0, 0.05);
+  border: 1px solid rgba(255, 215, 0, 0.15);
+}
+
+[data-theme="dark"] .author-profile {
+  box-shadow: 
+    0 0 40px rgba(255, 215, 0, 0.15),
+    0 0 80px rgba(255, 215, 0, 0.08),
+    inset 0 0 2px rgba(255, 215, 0, 0.2);
+  border: 1px solid rgba(255, 215, 0, 0.25);
+}
+
+.author-avatar-large {
+  position: relative;
+  display: inline-block;
+  box-shadow: 
+    0 0 20px rgba(255, 215, 0, 0.3),
+    0 0 40px rgba(255, 215, 0, 0.15);
+  border-radius: 50%;
+  padding: 3px;
+  background: linear-gradient(135deg, 
+    rgba(255, 215, 0, 0.2), 
+    rgba(255, 215, 0, 0.1));
+}
+
+.author-status {
+  color: var(--fg);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, 
+    rgba(255, 215, 0, 0.1), 
+    rgba(255, 215, 0, 0.05));
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 20px;
+  display: inline-block;
+}
