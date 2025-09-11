@@ -398,7 +398,13 @@ function buildRouter(db) {
   );
 
   router.get('/compose', requireAuth, (req, res) => {
-    res.render('compose', { user: req.session.user, errors: [], values: {}, pageClass: 'compose' });
+    res.render('compose', { 
+      user: req.session.user, 
+      errors: [], 
+      values: {}, 
+      pageClass: 'compose',
+      theme: req.cookies?.theme || 'light'
+    });
   });
   
   // Drafts routes
@@ -508,7 +514,8 @@ function buildRouter(db) {
       errors: [], 
       values: draft,
       draft,
-      pageClass: 'compose'
+      pageClass: 'compose',
+      theme: req.cookies?.theme || 'light'
     });
   });
   
