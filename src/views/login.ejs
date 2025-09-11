@@ -1,56 +1,42 @@
 <style>
   .logo-container {
     text-align: center;
-    margin: 40px auto 30px;
-    animation: fadeIn 0.8s ease-in;
+    margin: 30px auto 20px;
+    opacity: 0.9;
   }
   
   .logo-image {
-    width: 120px;
-    height: 120px;
-    border-radius: 24px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    transition: opacity 0.2s ease;
   }
   
   .logo-image:hover {
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 6px 30px rgba(0,0,0,0.15);
-  }
-  
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  [data-theme="dark"] .logo-image {
-    box-shadow: 0 4px 20px rgba(255,255,255,0.05);
-  }
-  
-  [data-theme="dark"] .logo-image:hover {
-    box-shadow: 0 6px 30px rgba(255,255,255,0.1);
+    opacity: 1;
   }
   
   .auth-container {
-    max-width: 400px;
+    max-width: 320px;
     margin: 0 auto;
   }
   
-  .oauth-section {
-    margin: 30px 0;
+  .auth-container h1 {
+    font-size: 20px;
+    font-weight: normal;
     text-align: center;
+    margin: 0 0 24px 0;
+    color: var(--muted);
+  }
+  
+  .oauth-section {
+    margin: 20px 0;
   }
   
   .divider {
     display: flex;
     align-items: center;
-    margin: 30px 0;
+    margin: 20px 0;
   }
   
   .divider::before,
@@ -59,59 +45,108 @@
     flex: 1;
     height: 1px;
     background: var(--border);
+    opacity: 0.5;
   }
   
   .divider span {
-    padding: 0 16px;
+    padding: 0 12px;
     color: var(--muted);
-    font-size: 14px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.6;
   }
   
   .oauth-buttons {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
   }
   
   .oauth-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 12px 20px;
+    gap: 8px;
+    padding: 8px 16px;
     border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--card);
+    border-radius: 6px;
+    background: transparent;
     color: var(--fg);
     text-decoration: none;
-    font-weight: 500;
-    transition: all 0.2s;
+    font-size: 13px;
+    font-weight: normal;
+    transition: all 0.15s;
+    opacity: 0.8;
   }
   
   .oauth-btn:hover {
+    opacity: 1;
     background: var(--hover-bg);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px var(--shadow-heavy);
   }
   
   .oauth-btn.google {
-    border-color: #4285f4;
+    border-color: var(--border);
   }
   
   .oauth-btn.apple {
     border-color: var(--border);
-    background: var(--card);
-    color: var(--fg);
-  }
-  
-  .oauth-btn.apple:hover {
-    background: var(--hover-bg);
-    transform: translateY(-1px);
   }
   
   .oauth-icon {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
+    opacity: 0.8;
+  }
+  
+  form label {
+    font-size: 12px;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 16px;
+  }
+  
+  form input {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 13px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--card);
+    margin-top: 4px;
+  }
+  
+  form button {
+    width: 100%;
+    padding: 8px 16px;
+    font-size: 13px;
+    border: 1px solid var(--fg);
+    background: var(--fg);
+    color: var(--bg);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    margin-top: 20px;
+  }
+  
+  form button:hover {
+    opacity: 0.9;
+  }
+  
+  .auth-footer {
+    text-align: center;
+    margin-top: 24px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  
+  .auth-footer a {
+    color: var(--fg);
+    opacity: 0.7;
+  }
+  
+  .auth-footer a:hover {
+    opacity: 1;
   }
 </style>
 
@@ -161,9 +196,12 @@
     <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
     <label>Email <input type="email" name="email" value="<%= values.email || '' %>" required /></label>
     <label>Password <input type="password" name="password" required /></label>
-    <button type="submit">Sign in with email</button>
-    <p style="text-align: center; margin-top: 20px;">No account? <a href="/signup">Create one</a></p>
+    <button type="submit">Sign in</button>
   </form>
+  
+  <div class="auth-footer">
+    Don't have an account? <a href="/signup">Sign up</a>
+  </div>
 </div>
 
 
