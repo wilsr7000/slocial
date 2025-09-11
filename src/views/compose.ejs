@@ -10,6 +10,10 @@
     padding: 0;
   }
   
+  [data-theme="dark"] body.writing-surface {
+    background: #0d0d0d;
+  }
+  
   .writing-container {
     max-width: 720px;
     margin: 0 auto;
@@ -44,6 +48,10 @@
     animation-delay: 0.5s;
   }
   
+  [data-theme="dark"] .format-row {
+    border-bottom-color: #333;
+  }
+  
   .format-option {
     font-size: 13px;
     color: #999;
@@ -53,13 +61,25 @@
     padding: 4px 0;
   }
   
+  [data-theme="dark"] .format-option {
+    color: #666;
+  }
+  
   .format-option:hover {
     color: #666;
+  }
+  
+  [data-theme="dark"] .format-option:hover {
+    color: #999;
   }
   
   .format-option.active {
     color: #333;
     font-weight: 500;
+  }
+  
+  [data-theme="dark"] .format-option.active {
+    color: #e5e5e5;
   }
   
   .format-option.active::after {
@@ -70,6 +90,10 @@
     right: 0;
     height: 1px;
     background: #333;
+  }
+  
+  [data-theme="dark"] .format-option.active::after {
+    background: #e5e5e5;
   }
   
   .format-detail {
@@ -121,6 +145,10 @@
     margin: 0;
   }
   
+  [data-theme="dark"] .surface-title {
+    color: #666;
+  }
+  
   .surface-quote {
     font-size: 15px;
     font-style: italic;
@@ -147,8 +175,16 @@
     overflow: hidden;
   }
   
+  [data-theme="dark"] .letter-title {
+    color: #e5e5e5;
+  }
+  
   .letter-title::placeholder {
     color: #ddd;
+  }
+  
+  [data-theme="dark"] .letter-title::placeholder {
+    color: #555;
   }
   
   /* Writing area - completely clean */
@@ -167,9 +203,17 @@
     resize: none;
   }
   
+  [data-theme="dark"] .letter-body {
+    color: #d5d5d5;
+  }
+  
   .letter-body::placeholder {
     color: #ccc;
     font-style: italic;
+  }
+  
+  [data-theme="dark"] .letter-body::placeholder {
+    color: #555;
   }
   
   /* Floating tools - always visible but subtle */
@@ -451,7 +495,7 @@
   }
 </style>
 
-<body class="writing-surface">
+<body class="writing-surface" data-theme="<%= typeof theme !== 'undefined' ? theme : 'light' %>">
   <div class="focus-indicator"></div>
   <div class="saved-indicator" id="saved-indicator">Draft saved</div>
   <div class="constraint-counter" id="constraint-counter"></div>
