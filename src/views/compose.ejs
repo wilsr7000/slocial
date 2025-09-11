@@ -233,6 +233,37 @@
     transition: opacity 0.3s ease;
   }
   
+  /* Theme toggle for compose page */
+  .compose-theme-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: transparent;
+    border: 1px solid #e5e5e5;
+    border-radius: 20px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #666;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    opacity: 0.5;
+  }
+  
+  .compose-theme-toggle:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  [data-theme="dark"] .compose-theme-toggle {
+    border-color: #333;
+    color: #999;
+  }
+  
+  [data-theme="dark"] .compose-theme-toggle:hover {
+    background: rgba(0, 0, 0, 0.2);
+  }
+  
   .writing-tools:hover {
     opacity: 1;
   }
@@ -501,6 +532,9 @@
 </style>
 
 <body class="writing-surface" data-theme="<%= typeof theme !== 'undefined' ? theme : 'light' %>">
+  <button class="compose-theme-toggle" onclick="toggleComposeTheme()">
+    <span id="theme-icon">🌙</span>
+  </button>
   <div class="focus-indicator"></div>
   <div class="saved-indicator" id="saved-indicator">Draft saved</div>
   <div class="constraint-counter" id="constraint-counter"></div>
@@ -649,6 +683,30 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 <script>
+  // Theme toggle for compose page
+  function toggleComposeTheme() {
+    const body = document.body;
+    const currentTheme = body.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    
+    body.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    
+    // Set cookie that expires in 1 year
+    const date = new Date();
+    date.setFullYear(date.getFullYear() + 1);
+    document.cookie = `theme=${newTheme}; path=/; expires=${date.toUTCString()}; SameSite=Lax`;
+    
+    // Update icon
+    document.getElementById('theme-icon').textContent = newTheme === 'light' ? '🌙' : '☀️';
+  }
+  
+  // Initialize theme icon on load
+  document.addEventListener('DOMContentLoaded', () => {
+    const currentTheme = document.body.getAttribute('data-theme');
+    document.getElementById('theme-icon').textContent = currentTheme === 'light' ? '🌙' : '☀️';
+  });
+  
   // Format constraints
   const formatConstraints = {
     standard: { maxWords: null, maxChars: null, exact: null },
