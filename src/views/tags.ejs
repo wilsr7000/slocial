@@ -498,7 +498,8 @@
   }
   
   .modal-content {
-    background-color: white;
+    background-color: var(--card, white);
+    color: var(--fg, #333);
     padding: 2rem;
     border-radius: 12px;
     width: 90%;
@@ -507,6 +508,7 @@
     overflow-y: auto;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
     animation: slideUp 0.3s;
+    border: 1px solid var(--border, #e0e0e0);
   }
   
   @keyframes slideUp {
@@ -526,12 +528,12 @@
     align-items: center;
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 2px solid #f0f0f0;
+    border-bottom: 2px solid var(--border, #f0f0f0);
   }
   
   .modal-header h2 {
     margin: 0;
-    color: #333;
+    color: var(--fg, #333);
     font-size: 1.75rem;
   }
   
@@ -540,8 +542,8 @@
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
-    color: #999;
-    transition: color 0.2s;
+    color: var(--muted, #999);
+    transition: all 0.2s;
     padding: 0;
     width: 32px;
     height: 32px;
@@ -552,8 +554,8 @@
   }
   
   .close-modal:hover {
-    color: #333;
-    background-color: #f0f0f0;
+    color: var(--fg, #333);
+    background-color: var(--hover-bg, #f0f0f0);
   }
   
   .modal-body {
@@ -568,7 +570,7 @@
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 600;
-    color: #333;
+    color: var(--fg, #333);
   }
   
   .form-group input[type="text"],
@@ -576,17 +578,19 @@
   .form-group textarea {
     width: 100%;
     padding: 0.75rem;
-    border: 2px solid #e0e0e0;
+    border: 2px solid var(--border, #e0e0e0);
     border-radius: 8px;
     font-size: 1rem;
     transition: border-color 0.2s;
     font-family: inherit;
+    background-color: var(--bg, white);
+    color: var(--fg, #333);
   }
   
   .form-group input:focus,
   .form-group textarea:focus {
     outline: none;
-    border-color: var(--primary-color);
+    border-color: var(--primary-color, #6366f1);
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
   }
   
@@ -597,14 +601,14 @@
   
   .form-group .help-text {
     font-size: 0.875rem;
-    color: #666;
+    color: var(--muted, #666);
     margin-top: 0.25rem;
   }
   
   .char-count {
     text-align: right;
     font-size: 0.875rem;
-    color: #999;
+    color: var(--muted, #999);
     margin-top: 0.25rem;
   }
   
@@ -621,19 +625,20 @@
     justify-content: flex-end;
     gap: 1rem;
     padding-top: 1rem;
-    border-top: 2px solid #f0f0f0;
+    border-top: 2px solid var(--border, #f0f0f0);
   }
   
   .editors-info {
-    background: #f8f9fa;
+    background: var(--hover-bg, #f8f9fa);
     padding: 1rem;
     border-radius: 8px;
     margin-top: 1rem;
+    border: 1px solid var(--border, transparent);
   }
   
   .editors-info h4 {
     margin: 0 0 0.5rem 0;
-    color: #495057;
+    color: var(--fg, #495057);
     font-size: 0.875rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -641,9 +646,23 @@
   
   .editors-info p {
     margin: 0;
-    color: #6c757d;
+    color: var(--muted, #6c757d);
     font-size: 0.875rem;
     line-height: 1.5;
+  }
+  
+  /* Dark mode specific adjustments */
+  [data-theme="dark"] .modal {
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+  
+  [data-theme="dark"] .modal-content {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  }
+  
+  [data-theme="dark"] .form-group input:focus,
+  [data-theme="dark"] .form-group textarea:focus {
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
   }
 </style>
 
