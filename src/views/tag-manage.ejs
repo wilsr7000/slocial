@@ -234,12 +234,28 @@
   <div class="manage-header">
     <h1>Manage Tag: #<%= tag.name %></h1>
     <div class="tag-info">
-      <span>📝 <%= tag.description || 'No description' %></span>
+      <span>📝 <%= tag.short_description || tag.description || 'No description' %></span>
       <span>|</span>
       <span><%= tag.is_public ? '🌍 Public' : '🔒 Private' %></span>
       <span>|</span>
       <span>📊 Usage: <%= tag.usage_count || 0 %></span>
     </div>
+    <% 
+      // Check if current user is the founder
+      const isFounder = owners && owners.some(o => o.user_id === user.id && o.ownership_type === 'founder');
+    %>
+    <% if (isFounder) { %>
+      <button class="btn btn-primary" style="margin-top: 1rem;" onclick="showEditTagModal()">
+        ✏️ Edit Tag Details
+      </button>
+      <p style="color: #666; font-size: 0.875rem; margin-top: 0.5rem;">
+        As the founder, only you can edit this tag's details.
+      </p>
+    <% } else { %>
+      <p style="color: #666; font-size: 0.875rem; margin-top: 0.5rem;">
+        Only the tag founder can edit tag details. Co-owners can manage access requests.
+      </p>
+    <% } %>
   </div>
   
   <% if (message) { %>
@@ -335,6 +351,10 @@
   <!-- Tag Owners -->
   <div class="section">
     <h2 class="section-title">Tag Owners</h2>
+    <p style="color: #666; font-size: 0.875rem; margin-bottom: 1rem;">
+      <strong>Founder:</strong> Can edit tag details and manage everything<br>
+      <strong>Co-owners:</strong> Can manage access requests and permissions
+    </p>
     
     <% if (owners && owners.length > 0) { %>
       <div class="owners-list">
@@ -345,7 +365,7 @@
             <span class="owner-type <%= owner.ownership_type %>">
               <%= owner.ownership_type %>
               <% if (owner.ownership_type === 'founder') { %>
-                👑
+                👑 (Can Edit)
               <% } %>
             </span>
           </div>
@@ -358,3 +378,275 @@
     <% } %>
   </div>
 </div>
+
+<!-- Edit Tag Modal (only for founders) -->
+<% if (isFounder) { %>
+<div id="editTagModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>✏️ Edit Tag Details</h2>
+      <button class="close-modal" onclick="closeEditModal()">&times;</button>
+    </div>
+    
+    <form id="editTagForm" action="/tags/<%= tag.id %>/edit" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="tagName">Tag Name *</label>
+          <input 
+            type="text" 
+            id="tagName" 
+            name="name" 
+            required 
+            value="<%= tag.name %>"
+            maxlength="50"
+          />
+          <div class="char-count" id="nameCount">0 / 50</div>
+        </div>
+        
+        <div class="form-group">
+          <label for="shortDescription">Short Description *</label>
+          <input 
+            type="text" 
+            id="shortDescription" 
+            name="short_description" 
+            required 
+            value="<%= tag.short_description || tag.description || '' %>"
+            maxlength="100"
+          />
+          <div class="char-count" id="shortCount">0 / 100</div>
+        </div>
+        
+        <div class="form-group">
+          <label for="longDescription">Long Description</label>
+          <textarea 
+            id="longDescription" 
+            name="long_description" 
+            maxlength="500"
+          ><%= tag.long_description || '' %></textarea>
+          <div class="char-count" id="longCount">0 / 500</div>
+        </div>
+        
+        <div class="form-group">
+          <label for="imageUrl">Tag Image URL (optional)</label>
+          <input 
+            type="url" 
+            id="imageUrl" 
+            name="image_url" 
+            value="<%= tag.image_url || '' %>"
+            placeholder="https://example.com/image.jpg"
+          />
+          <div class="help-text">An image to represent this tag (square images work best)</div>
+        </div>
+        
+        <div class="form-group">
+          <label>
+            <input type="checkbox" name="is_public" value="1" <%= tag.is_public ? 'checked' : '' %> />
+            Make this tag public (visible to all users)
+          </label>
+        </div>
+        
+        <div class="info-note">
+          <strong>Note:</strong> As the founder, you have exclusive rights to edit this tag. 
+          Co-owners can help manage access requests but cannot modify tag details.
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  /* Modal Styles */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+  
+  .modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .modal-content {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f0f0f0;
+  }
+  
+  .modal-header h2 {
+    margin: 0;
+    color: #333;
+  }
+  
+  .close-modal {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #999;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+  }
+  
+  .close-modal:hover {
+    color: #333;
+    background-color: #f0f0f0;
+  }
+  
+  .modal-body {
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .form-group input[type="text"],
+  .form-group input[type="url"],
+  .form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+  }
+  
+  .form-group input:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  }
+  
+  .form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+  
+  .help-text {
+    font-size: 0.875rem;
+    color: #666;
+    margin-top: 0.25rem;
+  }
+  
+  .char-count {
+    text-align: right;
+    font-size: 0.875rem;
+    color: #999;
+    margin-top: 0.25rem;
+  }
+  
+  .char-count.warning {
+    color: #ff9800;
+  }
+  
+  .char-count.error {
+    color: #f44336;
+  }
+  
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 2px solid #f0f0f0;
+  }
+  
+  .info-note {
+    background: #f0f8ff;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+    color: #0066cc;
+  }
+</style>
+
+<script>
+  function showEditTagModal() {
+    document.getElementById('editTagModal').classList.add('active');
+    updateCharCounts();
+  }
+  
+  function closeEditModal() {
+    document.getElementById('editTagModal').classList.remove('active');
+  }
+  
+  // Close modal when clicking outside
+  window.addEventListener('click', (e) => {
+    const modal = document.getElementById('editTagModal');
+    if (e.target === modal) {
+      closeEditModal();
+    }
+  });
+  
+  // Character count functionality
+  function updateCharCount(inputId, countId, maxLength) {
+    const input = document.getElementById(inputId);
+    const counter = document.getElementById(countId);
+    
+    if (input && counter) {
+      const updateCount = () => {
+        const length = input.value.length;
+        counter.textContent = `${length} / ${maxLength}`;
+        
+        // Update color based on length
+        counter.classList.remove('warning', 'error');
+        if (length > maxLength * 0.9) {
+          counter.classList.add('error');
+        } else if (length > maxLength * 0.7) {
+          counter.classList.add('warning');
+        }
+      };
+      
+      input.addEventListener('input', updateCount);
+      updateCount();
+    }
+  }
+  
+  function updateCharCounts() {
+    updateCharCount('tagName', 'nameCount', 50);
+    updateCharCount('shortDescription', 'shortCount', 100);
+    updateCharCount('longDescription', 'longCount', 500);
+  }
+</script>
+<% } %>

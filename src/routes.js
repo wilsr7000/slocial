@@ -94,6 +94,18 @@ function buildRouter(db) {
     return !!ownership;
   }
   
+  function isTagFounder(userId, tagId) {
+    if (!userId) return false;
+    
+    const founder = db.prepare(`
+      SELECT 1 FROM tag_owners 
+      WHERE tag_id = ? AND user_id = ? AND ownership_type = 'founder' AND is_active = 1
+      LIMIT 1
+    `).get(tagId, userId);
+    
+    return !!founder;
+  }
+  
   function getTagOwnership(tagId) {
     return db.prepare(`
       SELECT o.*, u.handle, u.email 
@@ -122,18 +134,8 @@ function buildRouter(db) {
   }
   
   function canUserEditTag(userId, tagId) {
-    // Owners can always edit their tags
-    if (isTagOwner(userId, tagId)) return true;
-    
-    // Check if user has edit permission
-    const permission = db.prepare(`
-      SELECT 1 FROM tag_permissions 
-      WHERE tag_id = ? AND user_id = ? AND permission_type = 'edit'
-        AND (expires_at IS NULL OR expires_at > datetime('now'))
-      LIMIT 1
-    `).get(tagId, userId);
-    
-    return !!permission;
+    // Only the founder (creator) can edit the tag
+    return isTagFounder(userId, tagId);
   }
   
   function addTagOwner(tagId, newOwnerId, grantedBy, ownershipType = 'co-owner', notes = null) {
@@ -1161,20 +1163,11 @@ function buildRouter(db) {
         VALUES (?, ?, 'founder', ?)
       `).run(tagId, userId, userId);
       
-      // Grant creator all permissions
+      // Grant creator 'use' permission (edit is implicit for founder)
       db.prepare(`
         INSERT INTO tag_permissions (tag_id, user_id, permission_type, granted_by)
-        VALUES 
-          (?, ?, 'use', ?),
-          (?, ?, 'edit', ?),
-          (?, ?, 'delete', ?),
-          (?, ?, 'grant', ?)
-      `).run(
-        tagId, userId, userId,
-        tagId, userId, userId,
-        tagId, userId, userId,
-        tagId, userId, userId
-      );
+        VALUES (?, ?, 'use', ?)
+      `).run(tagId, userId, userId);
       
       // Commit transaction
       db.prepare('COMMIT').run();
@@ -1303,6 +1296,68 @@ function buildRouter(db) {
       message: req.query.message,
       csrfToken: req.csrfToken()
     });
+  });
+  
+  // Edit tag (only for founders)
+  router.post('/tags/:id/edit', requireAuth, (req, res) => {
+    const tagId = req.params.id;
+    const userId = req.session.user.id;
+    const { name, short_description, long_description, image_url, is_public } = req.body;
+    
+    // Check if user is the founder
+    if (!isTagFounder(userId, tagId)) {
+      return res.status(403).send('Only the tag founder can edit tag details');
+    }
+    
+    // Validate required fields
+    if (!name || !short_description) {
+      return res.redirect(`/tags/${tagId}/manage?error=` + encodeURIComponent('Tag name and short description are required'));
+    }
+    
+    // Create slug from name
+    const slug = name.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    
+    try {
+      // Check if another tag with same name exists (case-insensitive)
+      const existing = db.prepare(`
+        SELECT id FROM tags WHERE name COLLATE NOCASE = ? AND id != ?
+      `).get(name, tagId);
+      
+      if (existing) {
+        return res.redirect(`/tags/${tagId}/manage?error=` + encodeURIComponent('A tag with this name already exists'));
+      }
+      
+      // Update the tag
+      db.prepare(`
+        UPDATE tags SET 
+          name = ?,
+          slug = ?,
+          description = ?,
+          short_description = ?,
+          long_description = ?,
+          image_url = ?,
+          is_public = ?,
+          updated_at = datetime('now')
+        WHERE id = ?
+      `).run(
+        name,
+        slug,
+        short_description, // Use short_description for the main description field
+        short_description,
+        long_description || null,
+        image_url || null,
+        is_public ? 1 : 0,
+        tagId
+      );
+      
+      res.redirect(`/tags/${tagId}/manage?message=` + encodeURIComponent('Tag updated successfully!'));
+      
+    } catch (error) {
+      console.error('Error updating tag:', error);
+      res.redirect(`/tags/${tagId}/manage?error=` + encodeURIComponent('Failed to update tag'));
+    }
   });
   
   // Approve/Reject access request
