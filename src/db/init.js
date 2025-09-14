@@ -185,6 +185,7 @@ function initializeDatabase() {
       created_by INTEGER NOT NULL,
       is_public INTEGER NOT NULL DEFAULT 1,
       is_active INTEGER NOT NULL DEFAULT 1,
+      auto_approve INTEGER NOT NULL DEFAULT 0,
       usage_count INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),

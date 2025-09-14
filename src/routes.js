@@ -1160,7 +1160,7 @@ function buildRouter(db) {
   
   // Create a new tag
   router.post('/tags/create', requireAuth, tagImageUpload.single('image_file'), (req, res) => {
-    const { name, short_description, long_description, image_url, is_public } = req.body;
+    const { name, short_description, long_description, image_url, is_public, auto_approve } = req.body;
     const userId = req.session.user.id;
     
     // Validate required fields
@@ -1203,8 +1203,8 @@ function buildRouter(db) {
       
       // Create the tag
       const result = db.prepare(`
-        INSERT INTO tags (name, slug, description, short_description, long_description, image_url, created_by, is_public)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO tags (name, slug, description, short_description, long_description, image_url, created_by, is_public, auto_approve)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         name,
         slug,
@@ -1213,7 +1213,8 @@ function buildRouter(db) {
         long_description || null,
         finalImageUrl,
         userId,
-        is_public ? 1 : 0
+        is_public ? 1 : 0,
+        auto_approve ? 1 : 0
       );
       
       const tagId = result.lastInsertRowid;
@@ -1261,40 +1262,61 @@ function buildRouter(db) {
       return res.redirect('/tags?error=' + encodeURIComponent('You already have access to this tag'));
     }
     
+    // Get tag info including auto_approve setting
+    const tag = db.prepare('SELECT name, auto_approve FROM tags WHERE id = ?').get(tagId);
+    
+    if (!tag) {
+      return res.redirect('/tags?error=' + encodeURIComponent('Tag not found'));
+    }
+    
     try {
-      // Check if there's already a pending request
-      const existingRequest = db.prepare(`
-        SELECT status FROM tag_access_requests 
-        WHERE tag_id = ? AND user_id = ?
-      `).get(tagId, userId);
-      
-      if (existingRequest) {
-        if (existingRequest.status === 'pending') {
-          return res.redirect('/tags?error=' + encodeURIComponent('You already have a pending request for this tag'));
-        }
-        // Update existing request
+      if (tag.auto_approve) {
+        // Auto-approve is enabled - grant access immediately
         db.prepare(`
-          UPDATE tag_access_requests 
-          SET status = 'pending', 
-              request_message = ?, 
-              requested_at = datetime('now'),
-              responded_at = NULL,
-              responded_by = NULL,
-              response_message = NULL
-          WHERE tag_id = ? AND user_id = ?
-        `).run(message || null, tagId, userId);
+          INSERT INTO tag_permissions (tag_id, user_id, permission_type, granted_by)
+          VALUES (?, ?, 'use', ?)
+        `).run(tagId, userId, userId); // Self-granted through auto-approve
+        
+        // Record the request as auto-approved
+        db.prepare(`
+          INSERT INTO tag_access_requests (tag_id, user_id, request_message, status, response_message, responded_at, responded_by)
+          VALUES (?, ?, ?, 'approved', 'Auto-approved (instant access enabled)', datetime('now'), ?)
+        `).run(tagId, userId, message || null, userId);
+        
+        res.redirect('/tags?message=' + encodeURIComponent(`🎉 Instant access granted to "${tag.name}" tag!`));
       } else {
-        // Create new request
-        db.prepare(`
-          INSERT INTO tag_access_requests (tag_id, user_id, request_message)
-          VALUES (?, ?, ?)
-        `).run(tagId, userId, message || null);
+        // Manual approval required
+        // Check if there's already a pending request
+        const existingRequest = db.prepare(`
+          SELECT status FROM tag_access_requests 
+          WHERE tag_id = ? AND user_id = ?
+        `).get(tagId, userId);
+        
+        if (existingRequest) {
+          if (existingRequest.status === 'pending') {
+            return res.redirect('/tags?error=' + encodeURIComponent('You already have a pending request for this tag'));
+          }
+          // Update existing request
+          db.prepare(`
+            UPDATE tag_access_requests 
+            SET status = 'pending', 
+                request_message = ?, 
+                requested_at = datetime('now'),
+                responded_at = NULL,
+                responded_by = NULL,
+                response_message = NULL
+            WHERE tag_id = ? AND user_id = ?
+          `).run(message || null, tagId, userId);
+        } else {
+          // Create new request
+          db.prepare(`
+            INSERT INTO tag_access_requests (tag_id, user_id, request_message)
+            VALUES (?, ?, ?)
+          `).run(tagId, userId, message || null);
+        }
+        
+        res.redirect('/tags?message=' + encodeURIComponent(`Access request sent for "${tag.name}" tag - awaiting approval`));
       }
-      
-      // Get tag info
-      const tag = db.prepare('SELECT name FROM tags WHERE id = ?').get(tagId);
-      
-      res.redirect('/tags?message=' + encodeURIComponent(`Access request sent for "${tag.name}" tag`));
     } catch (error) {
       console.error('Error requesting tag access:', error);
       res.redirect('/tags?error=' + encodeURIComponent('Failed to send request'));
@@ -1371,7 +1393,7 @@ function buildRouter(db) {
   router.post('/tags/:id/edit', requireAuth, tagImageUpload.single('image_file'), (req, res) => {
     const tagId = req.params.id;
     const userId = req.session.user.id;
-    const { name, short_description, long_description, image_url, is_public, remove_image } = req.body;
+    const { name, short_description, long_description, image_url, is_public, auto_approve, remove_image } = req.body;
     
     // Check if user is the founder
     if (!isTagFounder(userId, tagId)) {
@@ -1455,6 +1477,7 @@ function buildRouter(db) {
           long_description = ?,
           image_url = ?,
           is_public = ?,
+          auto_approve = ?,
           updated_at = datetime('now')
         WHERE id = ?
       `).run(
@@ -1465,6 +1488,7 @@ function buildRouter(db) {
         long_description || null,
         finalImageUrl,
         is_public ? 1 : 0,
+        auto_approve ? 1 : 0,
         tagId
       );
       

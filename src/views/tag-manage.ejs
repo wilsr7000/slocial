@@ -496,6 +496,16 @@
           </label>
         </div>
         
+        <div class="form-group">
+          <label>
+            <input type="checkbox" name="auto_approve" value="1" <%= tag.auto_approve ? 'checked' : '' %> />
+            ⚡ Enable instant access (auto-approve all requests)
+          </label>
+          <div class="help-text" style="margin-left: 1.5rem; margin-top: 0.25rem;">
+            When enabled, users can get immediate access without waiting for approval - like instant booking on Airbnb
+          </div>
+        </div>
+        
         <div class="info-note">
           <strong>Note:</strong> As the founder, you have exclusive rights to edit this tag. 
           Co-owners can help manage access requests but cannot modify tag details.

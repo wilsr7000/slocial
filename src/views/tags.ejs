@@ -1,22 +1,36 @@
 <style>
   .tags-container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 2rem auto;
     padding: 0 1rem;
   }
   
   .tags-header {
-    margin-bottom: 2rem;
+    text-align: center;
+    margin-bottom: 3rem;
+    padding: 2rem 0;
+    background: linear-gradient(135deg, var(--primary-color, #6366f1) 0%, #8b5cf6 100%);
+    color: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
   }
   
   .tags-header h1 {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
   }
   
   .tags-header p {
-    color: #666;
-    margin-bottom: 1rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 1.5rem;
+    font-size: 1.125rem;
+  }
+  
+  [data-theme="dark"] .tags-header {
+    background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   }
   
   .alert {
@@ -39,73 +53,155 @@
   
   .tags-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 2rem;
     margin-top: 2rem;
   }
   
   .tag-card {
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 1.5rem;
-    transition: box-shadow 0.2s;
+    background: var(--card, white);
+    border: 1px solid var(--border, #e0e0e0);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    position: relative;
   }
   
   .tag-card:hover {
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+  }
+  
+  [data-theme="dark"] .tag-card:hover {
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+  }
+  
+  .tag-image-container {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .tag-image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .tag-image-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    color: rgba(255, 255, 255, 0.8);
+    background: linear-gradient(135deg, 
+      hsl(calc(var(--tag-index, 0) * 137.5deg), 70%, 60%) 0%, 
+      hsl(calc(var(--tag-index, 0) * 137.5deg + 30), 70%, 50%) 100%);
+  }
+  
+  .instant-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #10b981;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  }
+  
+  .instant-badge::before {
+    content: '⚡';
+  }
+  
+  .tag-card-content {
+    padding: 1.5rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
   }
   
   .tag-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: start;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
   
   .tag-name {
-    font-size: 1.25rem;
-    font-weight: bold;
-    color: #333;
-    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--fg, #333);
+    margin: 0 0 0.5rem 0;
+    line-height: 1.2;
   }
   
   .tag-visibility {
     display: inline-block;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
     font-size: 0.75rem;
-    font-weight: 500;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
   }
   
   .tag-public {
-    background-color: #28a745;
-    color: white;
+    background-color: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+    border: 1px solid rgba(40, 167, 69, 0.2);
   }
   
   .tag-private {
-    background-color: #dc3545;
-    color: white;
+    background-color: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, 0.2);
   }
   
   .tag-description {
-    color: #666;
+    color: var(--muted, #666);
     margin-bottom: 1rem;
-    min-height: 2.5rem;
+    line-height: 1.5;
+    flex: 1;
+    font-size: 0.95rem;
   }
   
   .tag-stats {
-    display: flex;
-    gap: 1rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
     margin-bottom: 1rem;
-    font-size: 0.875rem;
-    color: #666;
+    padding: 1rem;
+    background: var(--hover-bg, #f8f9fa);
+    border-radius: 12px;
   }
   
   .tag-stat {
     display: flex;
+    flex-direction: column;
     align-items: center;
+    text-align: center;
     gap: 0.25rem;
+  }
+  
+  .tag-stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--fg, #333);
+  }
+  
+  .tag-stat-label {
+    font-size: 0.75rem;
+    color: var(--muted, #666);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
   
   .tag-owners {
@@ -237,126 +333,171 @@
 
 <div class="tags-container">
   <div class="tags-header">
-    <h1>Browse Tags</h1>
-    <% if (!user) { %>
-      <p style="background: #fff3cd; color: #856404; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
-        <strong>Note:</strong> As a visitor, you can only view letters tagged with "Public". 
-        <a href="/signup" style="color: #856404; text-decoration: underline;">Create an account</a> to request access to other tags.
-      </p>
-    <% } %>
-    <p>Explore available tags and request access to view tagged content</p>
+    <h1>📚 Explore Knowledge Tags</h1>
+    <p>Discover curated collections of letters organized by passionate editors</p>
     <% if (user) { %>
-      <button class="btn btn-primary" id="createTagBtn" style="margin-top: 1rem;">
-        ✨ Create New Tag
+      <button class="btn btn-primary" id="createTagBtn" style="background: white; color: var(--primary-color); font-weight: 600; padding: 0.75rem 1.5rem; font-size: 1rem;">
+        ✨ Create Your Own Tag
       </button>
-    <% } %>
-    
-    <% if (message) { %>
-      <div class="alert alert-success"><%= message %></div>
-    <% } %>
-    
-    <% if (error) { %>
-      <div class="alert alert-error"><%= error %></div>
+    <% } else { %>
+      <div style="margin-top: 1.5rem;">
+        <a href="/signup" class="btn btn-primary" style="background: white; color: var(--primary-color); font-weight: 600; padding: 0.75rem 1.5rem; font-size: 1rem; text-decoration: none; display: inline-block;">
+          Join to Create & Access Tags
+        </a>
+      </div>
     <% } %>
   </div>
   
+  <% if (!user) { %>
+    <div style="background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%); padding: 1.25rem; border-radius: 12px; margin-bottom: 2rem; text-align: center; box-shadow: 0 4px 12px rgba(251, 191, 36, 0.1);">
+      <strong style="color: #92400e; font-size: 1.1rem;">🔒 Limited Access as Visitor</strong>
+      <p style="color: #78350f; margin: 0.5rem 0 0 0;">
+        You can only view content tagged as "Public". Create an account to explore all tags and request access to exclusive content.
+      </p>
+    </div>
+  <% } %>
+  
+  <% if (message) { %>
+    <div class="alert alert-success" style="margin-bottom: 2rem;"><%= message %></div>
+  <% } %>
+  
+  <% if (error) { %>
+    <div class="alert alert-error" style="margin-bottom: 2rem;"><%= error %></div>
+  <% } %>
+  
   <div class="tags-grid">
-    <% tags.forEach(tag => { %>
-      <div class="tag-card">
-        <div class="tag-header">
-          <h2 class="tag-name">#<%= tag.name %></h2>
-          <span class="tag-visibility <%= tag.is_public ? 'tag-public' : 'tag-private' %>">
-            <%= tag.is_public ? 'Public' : 'Private' %>
-          </span>
-        </div>
-        
-        <p class="tag-description">
-          <%= tag.short_description || tag.description || 'No description available' %>
-        </p>
-        
-        <div class="tag-stats">
-          <div class="tag-stat">
-            📝 <%= tag.letter_count || 0 %> letters
-          </div>
-          <div class="tag-stat">
-            👥 <%= tag.owner_count || 0 %> owner<%= tag.owner_count !== 1 ? 's' : '' %>
-          </div>
-          <div class="tag-stat">
-            🔢 Used <%= tag.usage_count || 0 %> times
-          </div>
-        </div>
-        
-        <% if (tag.owners && tag.owners.length > 0) { %>
-          <div class="tag-owners">
-            <div class="tag-owners-label">Managed by:</div>
-            <div class="owner-list">
-              <% tag.owners.slice(0, 3).forEach(owner => { %>
-                <span class="owner-badge <%= owner.ownership_type %>">
-                  @<%= owner.handle %>
-                  <% if (owner.ownership_type === 'founder') { %>
-                    👑
-                  <% } %>
-                </span>
-              <% }) %>
-              <% if (tag.owners.length > 3) { %>
-                <span class="owner-badge">+<%= tag.owners.length - 3 %> more</span>
-              <% } %>
-            </div>
-          </div>
-        <% } %>
-        
-        <div class="tag-actions">
-          <% if (user) { %>
-            <% if (tag.is_owner) { %>
-              <a href="/tags/<%= tag.id %>/manage" class="btn btn-warning" style="position: relative;">
-                ⚙️ Manage
-                <% if (tag.pending_request_count > 0) { %>
-                  <span style="position: absolute; top: -8px; right: -8px; background: #dc3545; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold;">
-                    <%= tag.pending_request_count %>
-                  </span>
-                <% } %>
-              </a>
-            <% } else if (tag.has_access) { %>
-              <span class="has-access">✅ You have access</span>
-            <% } else if (tag.request_status === 'pending') { %>
-              <span class="pending-request">⏳ Request pending</span>
-              <form action="/tags/<%= tag.id %>/cancel-request" method="POST" style="display: inline;">
-                <button type="submit" class="btn btn-secondary">Cancel</button>
-              </form>
-            <% } else if (tag.request_status === 'rejected') { %>
-              <button class="btn btn-primary request-btn" data-tag-id="<%= tag.id %>">
-                🔄 Request Again
-              </button>
-            <% } else { %>
-              <button class="btn btn-primary request-btn" data-tag-id="<%= tag.id %>">
-                🔓 Request Access
-              </button>
-            <% } %>
+    <% tags.forEach((tag, index) => { %>
+      <div class="tag-card" style="--tag-index: <%= index %>;">
+        <!-- Image Section -->
+        <div class="tag-image-container">
+          <% if (tag.image_url) { %>
+            <img src="<%= tag.image_url %>" alt="<%= tag.name %>" />
           <% } else { %>
-            <a href="/login" class="btn btn-secondary">Login to request access</a>
+            <div class="tag-image-placeholder">
+              <%= tag.name.charAt(0).toUpperCase() %>
+            </div>
+          <% } %>
+          <% if (tag.auto_approve) { %>
+            <div class="instant-badge">Instant Access</div>
           <% } %>
         </div>
         
-        <% if (user && !tag.has_access && tag.request_status !== 'pending') { %>
-          <div class="request-form" id="request-form-<%= tag.id %>">
-            <form action="/tags/<%= tag.id %>/request-access" method="POST">
-              <div class="form-group">
-                <label for="message-<%= tag.id %>">Message to tag owners (optional):</label>
-                <textarea 
-                  name="message" 
-                  id="message-<%= tag.id %>"
-                  placeholder="Explain why you'd like access to content with this tag..."
-                ></textarea>
-              </div>
-              <div class="form-actions">
-                <button type="submit" class="btn btn-success">Send Request</button>
-                <button type="button" class="btn btn-secondary cancel-request-btn" data-tag-id="<%= tag.id %>">
-                  Cancel
-                </button>
-              </div>
-            </form>
+        <!-- Content Section -->
+        <div class="tag-card-content">
+          <div class="tag-header">
+            <span class="tag-visibility <%= tag.is_public ? 'tag-public' : 'tag-private' %>">
+              <%= tag.is_public ? 'Public' : 'Private' %>
+            </span>
+            <h2 class="tag-name">#<%= tag.name %></h2>
           </div>
-        <% } %>
+          
+          <p class="tag-description">
+            <%= tag.short_description || tag.description || 'No description available' %>
+          </p>
+          
+          <div class="tag-stats">
+            <div class="tag-stat">
+              <div class="tag-stat-value"><%= tag.letter_count || 0 %></div>
+              <div class="tag-stat-label">Letters</div>
+            </div>
+            <div class="tag-stat">
+              <div class="tag-stat-value"><%= tag.owner_count || 0 %></div>
+              <div class="tag-stat-label">Editors</div>
+            </div>
+            <div class="tag-stat">
+              <div class="tag-stat-value"><%= tag.usage_count || 0 %></div>
+              <div class="tag-stat-label">Uses</div>
+            </div>
+          </div>
+          
+          <% if (tag.owners && tag.owners.length > 0) { %>
+            <div class="tag-owners">
+              <div class="tag-owners-label">Managed by:</div>
+              <div class="owner-list">
+                <% tag.owners.slice(0, 3).forEach(owner => { %>
+                  <span class="owner-badge <%= owner.ownership_type %>">
+                    @<%= owner.handle %>
+                    <% if (owner.ownership_type === 'founder') { %>
+                      👑
+                    <% } %>
+                  </span>
+                <% }) %>
+                <% if (tag.owners.length > 3) { %>
+                  <span class="owner-badge">+<%= tag.owners.length - 3 %> more</span>
+                <% } %>
+              </div>
+            </div>
+          <% } %>
+          
+          <div class="tag-actions">
+            <% if (user) { %>
+              <% if (tag.is_owner) { %>
+                <a href="/tags/<%= tag.id %>/manage" class="btn btn-warning" style="position: relative;">
+                  ⚙️ Manage
+                  <% if (tag.pending_request_count > 0) { %>
+                    <span style="position: absolute; top: -8px; right: -8px; background: #dc3545; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold;">
+                      <%= tag.pending_request_count %>
+                    </span>
+                  <% } %>
+                </a>
+              <% } else if (tag.has_access) { %>
+                <span class="has-access">✅ You have access</span>
+              <% } else if (tag.request_status === 'pending') { %>
+                <span class="pending-request">⏳ Request pending</span>
+                <form action="/tags/<%= tag.id %>/cancel-request" method="POST" style="display: inline;">
+                  <button type="submit" class="btn btn-secondary">Cancel</button>
+                </form>
+              <% } else if (tag.request_status === 'rejected') { %>
+                <% if (tag.auto_approve) { %>
+                  <button class="btn btn-success request-btn" data-tag-id="<%= tag.id %>" data-instant="true">
+                    ⚡ Get Instant Access
+                  </button>
+                <% } else { %>
+                  <button class="btn btn-primary request-btn" data-tag-id="<%= tag.id %>">
+                    🔄 Request Again
+                  </button>
+                <% } %>
+              <% } else { %>
+                <% if (tag.auto_approve) { %>
+                  <button class="btn btn-success request-btn" data-tag-id="<%= tag.id %>" data-instant="true">
+                    ⚡ Get Instant Access
+                  </button>
+                <% } else { %>
+                  <button class="btn btn-primary request-btn" data-tag-id="<%= tag.id %>">
+                    🔓 Request Access
+                  </button>
+                <% } %>
+              <% } %>
+            <% } else { %>
+              <a href="/login" class="btn btn-secondary">Login to access</a>
+            <% } %>
+          </div>
+          
+          <% if (user && !tag.has_access && tag.request_status !== 'pending') { %>
+            <div class="request-form" id="request-form-<%= tag.id %>">
+              <form action="/tags/<%= tag.id %>/request-access" method="POST">
+                <% if (!tag.auto_approve) { %>
+                  <div class="form-group">
+                    <label for="message-<%= tag.id %>">Message to tag owners (optional):</label>
+                    <textarea 
+                      name="message" 
+                      id="message-<%= tag.id %>"
+                      placeholder="Explain why you'd like access to content with this tag..."
+                    ></textarea>
+                  </div>
+                <% } %>
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-success">
+                    <%= tag.auto_approve ? '⚡ Get Instant Access' : 'Send Request' %>
+                  </button>
+                  <button type="button" class="btn btn-secondary cancel-request-btn" data-tag-id="<%= tag.id %>">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          <% } %>
+        </div>
       </div>
     <% }) %>
   </div>
@@ -481,6 +622,16 @@
             <input type="checkbox" name="is_public" value="1" checked />
             Make this tag public (visible to all users)
           </label>
+        </div>
+        
+        <div class="form-group">
+          <label>
+            <input type="checkbox" name="auto_approve" value="1" />
+            ⚡ Enable instant access (auto-approve all requests)
+          </label>
+          <div class="help-text" style="margin-left: 1.5rem; margin-top: 0.25rem;">
+            Allow users to get immediate access without waiting for your approval
+          </div>
         </div>
         
         <div class="editors-info">
