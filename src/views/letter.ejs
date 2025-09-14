@@ -84,7 +84,18 @@
 <article class="letter-detail">
   <div class="letter-header">
     <h1 class="letter-title"><%= letter.title %></h1>
-    <div class="letter-date">Published <%= new Date(letter.publish_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) %></div>
+    <div class="letter-date">
+      Published <%= new Date(letter.publish_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) %>
+      <% if (letter.tags && letter.tags.length > 0) { %>
+        <div style="margin-top: 0.5rem;">
+          <% letter.tags.forEach((tag, index) => { %>
+            <span style="display: inline-block; background: #f0f0f0; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85em; margin-right: 0.5rem;">
+              #<%= tag.name %>
+            </span>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
   </div>
   
   <!-- HBR-style Author Section -->

@@ -75,7 +75,21 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             null  // OAuth users don't need password
           );
           
-          user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
+          const newUserId = info.lastInsertRowid;
+          
+          // Grant permission to use the public tag for all new users
+          try {
+            db.prepare(`
+              INSERT INTO tag_permissions (tag_id, user_id, permission_type, granted_by)
+              SELECT id, ?, 'use', ?
+              FROM tags WHERE slug = 'public'
+            `).run(newUserId, newUserId);
+          } catch (e) {
+            console.error('Failed to grant public tag permission:', e);
+            // Non-fatal error, continue
+          }
+          
+          user = db.prepare('SELECT * FROM users WHERE id = ?').get(newUserId);
         }
       }
       
@@ -241,7 +255,21 @@ if (process.env.APPLE_SERVICE_ID && process.env.APPLE_TEAM_ID && process.env.APP
             null  // OAuth users don't need password
           );
           
-          user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
+          const newUserId = info.lastInsertRowid;
+          
+          // Grant permission to use the public tag for all new users
+          try {
+            db.prepare(`
+              INSERT INTO tag_permissions (tag_id, user_id, permission_type, granted_by)
+              SELECT id, ?, 'use', ?
+              FROM tags WHERE slug = 'public'
+            `).run(newUserId, newUserId);
+          } catch (e) {
+            console.error('Failed to grant public tag permission:', e);
+            // Non-fatal error, continue
+          }
+          
+          user = db.prepare('SELECT * FROM users WHERE id = ?').get(newUserId);
         }
       }
       

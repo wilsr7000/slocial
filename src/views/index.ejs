@@ -33,7 +33,15 @@
 <section class="feed">
   <h2 class="section-title">Latest letters</h2>
   <% if (letters.length === 0) { %>
-    <p class="empty">No letters yet. Come back later.</p>
+    <div class="empty">
+      <p>No letters visible to you.</p>
+      <p style="margin-top: 1rem; color: var(--muted);">
+        Letters are organized by tags. To see content, you need access to at least one tag.
+      </p>
+      <a href="/tags" class="btn btn-primary" style="margin-top: 1rem;">
+        🏷️ Explore Tags & Request Access
+      </a>
+    </div>
   <% } %>
   <% letters.forEach(letter => { %>
     <article class="letter <%= letter.reading_status === 'later' ? 'letter-collapsed' : '' %>" data-letter-id="<%= letter.id %>">
@@ -71,7 +79,18 @@
             <span class="format-badge format-<%= letter.format %>"><%= letter.format %></span>
           <% } %>
         </h2>
-        <div class="meta"><%= new Date(letter.publish_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></div>
+        <div class="meta">
+          <%= new Date(letter.publish_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %>
+          <% if (letter.tags && letter.tags.length > 0) { %>
+            <span style="margin-left: 1rem;">
+              <% letter.tags.forEach((tag, index) => { %>
+                <span style="color: var(--muted); font-size: 0.9em;">
+                  #<%= tag.name %><% if (index < letter.tags.length - 1) { %>, <% } %>
+                </span>
+              <% }) %>
+            </span>
+          <% } %>
+        </div>
         <p><%- autoLink(letter.body.slice(0, 260)) %><% if (letter.body.length > 260) { %>…<% } %></p>
         
         <!-- Author section -->
