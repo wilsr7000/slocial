@@ -614,6 +614,7 @@ function buildRouter(db) {
     const offset = (page - 1) * pageSize;
     const now = dayjs().toISOString();
     const userId = req.session.user?.id || null;
+    const filterTag = req.query.filter || null;
     
     // Check if is_draft and approval_status columns exist
     let hasDraftColumn = false;
@@ -629,6 +630,20 @@ function buildRouter(db) {
     // Build tag visibility condition
     const tagVisibilityCondition = getTagVisibilityCondition(userId, 'l');
     
+    // Build tag filter condition if filtering by tag
+    let tagFilterCondition = '';
+    let filterTagData = null;
+    if (filterTag) {
+      // Get the tag data to display
+      filterTagData = db.prepare('SELECT * FROM tags WHERE name = ? COLLATE NOCASE AND is_active = 1').get(filterTag);
+      if (filterTagData) {
+        tagFilterCondition = `AND EXISTS (
+          SELECT 1 FROM letter_tags lt 
+          WHERE lt.letter_id = l.id AND lt.tag_id = @tagId
+        )`;
+      }
+    }
+    
     // Use appropriate query based on available columns - now with tag filtering
     const query = hasApprovalColumn ? `
       SELECT l.*, u.handle, u.bio, u.avatar_url, u.is_slocialite,
@@ -642,6 +657,7 @@ function buildRouter(db) {
         AND l.publish_at <= @now
         AND (l.approval_status = 'approved' OR l.approval_status IS NULL)
         AND ${tagVisibilityCondition}
+        ${tagFilterCondition}
       ORDER BY l.publish_at DESC
       LIMIT @limit OFFSET @offset
     ` : hasDraftColumn ? `
@@ -654,6 +670,7 @@ function buildRouter(db) {
       LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
       WHERE l.is_published = 1 AND l.is_draft = 0 AND l.publish_at <= @now
         AND ${tagVisibilityCondition}
+        ${tagFilterCondition}
       ORDER BY l.publish_at DESC
       LIMIT @limit OFFSET @offset
     ` : `
@@ -666,18 +683,29 @@ function buildRouter(db) {
       LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
       WHERE l.is_published = 1 AND l.publish_at <= @now
         AND ${tagVisibilityCondition}
+        ${tagFilterCondition}
       ORDER BY l.publish_at DESC
       LIMIT @limit OFFSET @offset
     `;
     
-    const letters = db.prepare(query).all({ now, limit: pageSize, offset, uid: userId || -1 });
+    const params = { now, limit: pageSize, offset, uid: userId || -1 };
+    if (filterTagData) {
+      params.tagId = filterTagData.id;
+    }
+    const letters = db.prepare(query).all(params);
     
     // Add tags to each letter for display
     letters.forEach(letter => {
       letter.tags = getLetterTags(letter.id);
     });
 
-    res.render('index', { user: req.session.user, letters, page, pageClass: 'home' });
+    res.render('index', { 
+      user: req.session.user, 
+      letters, 
+      page, 
+      pageClass: 'home',
+      filterTag: filterTagData
+    });
   });
 
   router.get('/about', (req, res) => {
@@ -701,6 +729,7 @@ function buildRouter(db) {
     const offset = (page - 1) * pageSize;
     const now = dayjs().toISOString();
     const userId = req.session.user?.id || null;
+    const filterTag = req.query.filter || null;
     
     // Check if is_draft column exists
     let hasDraftColumn = false;
@@ -714,6 +743,20 @@ function buildRouter(db) {
     // Build tag visibility condition
     const tagVisibilityCondition = getTagVisibilityCondition(userId, 'l');
     
+    // Build tag filter condition if filtering by tag
+    let tagFilterCondition = '';
+    let filterTagData = null;
+    if (filterTag) {
+      // Get the tag data to display
+      filterTagData = db.prepare('SELECT * FROM tags WHERE name = ? COLLATE NOCASE AND is_active = 1').get(filterTag);
+      if (filterTagData) {
+        tagFilterCondition = `AND EXISTS (
+          SELECT 1 FROM letter_tags lt 
+          WHERE lt.letter_id = l.id AND lt.tag_id = @tagId
+        )`;
+      }
+    }
+    
     // Use appropriate query based on whether draft column exists - now with tag filtering
     const query = hasDraftColumn ? `
       SELECT l.*, u.handle, u.bio, u.avatar_url, u.is_slocialite,
@@ -725,6 +768,7 @@ function buildRouter(db) {
       LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
       WHERE l.is_published = 1 AND l.is_draft = 0 AND l.publish_at <= @now
         AND ${tagVisibilityCondition}
+        ${tagFilterCondition}
       ORDER BY l.publish_at DESC
       LIMIT @limit OFFSET @offset
     ` : `
@@ -737,11 +781,16 @@ function buildRouter(db) {
       LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
       WHERE l.is_published = 1 AND l.publish_at <= @now
         AND ${tagVisibilityCondition}
+        ${tagFilterCondition}
       ORDER BY l.publish_at DESC
       LIMIT @limit OFFSET @offset
     `;
     
-    const letters = db.prepare(query).all({ now, limit: pageSize, offset, uid: userId || -1 });
+    const params = { now, limit: pageSize, offset, uid: userId || -1 };
+    if (filterTagData) {
+      params.tagId = filterTagData.id;
+    }
+    const letters = db.prepare(query).all(params);
     
     // Add tags to each letter for display
     letters.forEach(letter => {
@@ -751,12 +800,16 @@ function buildRouter(db) {
     // Check if there are more letters (also needs tag filtering for accurate count)
     const countQuery = hasDraftColumn ? 
       `SELECT COUNT(DISTINCT l.id) as total FROM letters l 
-       WHERE l.is_published = 1 AND l.is_draft = 0 AND l.publish_at <= ? 
-       AND ${tagVisibilityCondition}` :
+       WHERE l.is_published = 1 AND l.is_draft = 0 AND l.publish_at <= @now 
+       AND ${tagVisibilityCondition} ${tagFilterCondition}` :
       `SELECT COUNT(DISTINCT l.id) as total FROM letters l 
-       WHERE l.is_published = 1 AND l.publish_at <= ? 
-       AND ${tagVisibilityCondition}`;
-    const totalCount = db.prepare(countQuery).get(now).total;
+       WHERE l.is_published = 1 AND l.publish_at <= @now 
+       AND ${tagVisibilityCondition} ${tagFilterCondition}`;
+    const countParams = { now };
+    if (filterTagData) {
+      countParams.tagId = filterTagData.id;
+    }
+    const totalCount = db.prepare(countQuery).get(countParams).total;
     const hasMore = offset + letters.length < totalCount;
     
     // Format letters for API response

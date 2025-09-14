@@ -31,16 +31,34 @@
 </section>
 
 <section class="feed">
-  <h2 class="section-title">Latest letters</h2>
+  <h2 class="section-title">
+    Latest letters
+    <% if (typeof filterTag !== 'undefined' && filterTag) { %>
+      <span style="font-weight: normal; font-size: 0.8em; margin-left: 1rem;">
+        Filtered by: <span style="color: var(--primary-color)">#<%= filterTag.name %></span>
+        <a href="/" style="margin-left: 0.5rem; color: var(--muted); text-decoration: none;">✕ Clear</a>
+      </span>
+    <% } %>
+  </h2>
   <% if (letters.length === 0) { %>
     <div class="empty">
-      <p>No letters visible to you.</p>
-      <p style="margin-top: 1rem; color: var(--muted);">
-        Letters are organized by tags. To see content, you need access to at least one tag.
-      </p>
-      <a href="/tags" class="btn btn-primary" style="margin-top: 1rem;">
-        🏷️ Explore Tags & Request Access
-      </a>
+      <% if (typeof filterTag !== 'undefined' && filterTag) { %>
+        <p>No letters found with tag "<%= filterTag.name %>"</p>
+        <p style="margin-top: 1rem; color: var(--muted);">
+          This tag might not have any letters yet, or you might not have access to this tag.
+        </p>
+        <a href="/" class="btn btn-primary" style="margin-top: 1rem;">
+          View All Letters
+        </a>
+      <% } else { %>
+        <p>No letters visible to you.</p>
+        <p style="margin-top: 1rem; color: var(--muted);">
+          Letters are organized by tags. To see content, you need access to at least one tag.
+        </p>
+        <a href="/tags" class="btn btn-primary" style="margin-top: 1rem;">
+          🏷️ Explore Tags & Request Access
+        </a>
+      <% } %>
     </div>
   <% } %>
   <% letters.forEach(letter => { %>
@@ -59,6 +77,17 @@
             <span class="author-name">@<%= letter.handle %></span>
             <span class="separator">•</span>
             <span class="date"><%= new Date(letter.publish_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></span>
+            <% if (letter.tags && letter.tags.length > 0) { %>
+              <span class="separator">•</span>
+              <% letter.tags.forEach((tag, index) => { %>
+                <a href="/tags?filter=<%= encodeURIComponent(tag.name) %>" class="letter-tag" style="font-size: 0.85em;">
+                  #<%= tag.name %>
+                </a>
+                <% if (index < letter.tags.length - 1) { %>
+                  <span style="color: var(--muted); margin: 0 0.25rem;">·</span>
+                <% } %>
+              <% }) %>
+            <% } %>
             <button class="expand-btn" onclick="toggleLetterExpand(<%= letter.id %>)">
               <span class="expand-icon">▼</span> Expand
             </button>
@@ -82,11 +111,14 @@
         <div class="meta">
           <%= new Date(letter.publish_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %>
           <% if (letter.tags && letter.tags.length > 0) { %>
-            <span style="margin-left: 1rem;">
+            <span class="letter-tags">
               <% letter.tags.forEach((tag, index) => { %>
-                <span style="color: var(--muted); font-size: 0.9em;">
-                  #<%= tag.name %><% if (index < letter.tags.length - 1) { %>, <% } %>
-                </span>
+                <a href="/tags?filter=<%= encodeURIComponent(tag.name) %>" class="letter-tag">
+                  #<%= tag.name %>
+                </a>
+                <% if (index < letter.tags.length - 1) { %>
+                  <span style="color: var(--muted); margin: 0 0.25rem;">·</span>
+                <% } %>
               <% }) %>
             </span>
           <% } %>
@@ -185,6 +217,24 @@
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+.letter-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: 1rem;
+}
+
+.letter-tag {
+  color: var(--muted);
+  font-size: 0.9em;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.letter-tag:hover {
+  color: var(--fg);
 }
 </style>
 
@@ -320,10 +370,19 @@ function createLetterHTML(letter) {
     `<img src="${letter.avatar_url}" alt="${letter.handle}" onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\\"font-size:16px\\">👤</span>';">` :
     `<span style="font-size: 16px;">👤</span>`;
   
+  // Add tags HTML
+  let tagsHTML = '';
+  if (letter.tags && letter.tags.length > 0) {
+    const tagLinks = letter.tags.map(tag => 
+      `<a href="/tags?filter=${encodeURIComponent(tag.name)}" class="letter-tag">#${tag.name}</a>`
+    ).join('<span style="color: var(--muted); margin: 0 0.25rem;">·</span>');
+    tagsHTML = `<span class="letter-tags">${tagLinks}</span>`;
+  }
+  
   return `
     <article class="letter">
       <h2><a href="/letters/${letter.id}">${letter.title}</a></h2>
-      <div class="meta">${date}</div>
+      <div class="meta">${date}${tagsHTML ? ' ' + tagsHTML : ''}</div>
       <p>${excerpt}</p>
       
       <div class="feed-author">
@@ -346,7 +405,14 @@ async function loadMoreLetters() {
   document.getElementById('loading-indicator').style.display = 'block';
   
   try {
-    const response = await fetch(`/api/letters?page=${currentPage + 1}`);
+    // Preserve filter parameter if present
+    const urlParams = new URLSearchParams(window.location.search);
+    const filterParam = urlParams.get('filter');
+    const apiUrl = filterParam 
+      ? `/api/letters?page=${currentPage + 1}&filter=${encodeURIComponent(filterParam)}`
+      : `/api/letters?page=${currentPage + 1}`;
+    
+    const response = await fetch(apiUrl);
     const data = await response.json();
     
     if (data.letters && data.letters.length > 0) {

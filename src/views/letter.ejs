@@ -79,6 +79,31 @@
       font-size: 28px;
     }
   }
+  
+  .letter-tags {
+    margin-top: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .letter-tag {
+    display: inline-block;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    padding: 0.25rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85em;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+  
+  .letter-tag:hover {
+    background: var(--hover-bg);
+    border-color: var(--fg);
+    text-decoration: none;
+  }
 </style>
  
 <article class="letter-detail">
@@ -87,11 +112,11 @@
     <div class="letter-date">
       Published <%= new Date(letter.publish_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) %>
       <% if (letter.tags && letter.tags.length > 0) { %>
-        <div style="margin-top: 0.5rem;">
+        <div class="letter-tags">
           <% letter.tags.forEach((tag, index) => { %>
-            <span style="display: inline-block; background: #f0f0f0; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85em; margin-right: 0.5rem;">
+            <a href="/tags?filter=<%= encodeURIComponent(tag.name) %>" class="letter-tag">
               #<%= tag.name %>
-            </span>
+            </a>
           <% }) %>
         </div>
       <% } %>
