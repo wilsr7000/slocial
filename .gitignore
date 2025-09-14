@@ -5,3 +5,7 @@ src/db/*.db
 src/db/*.sqlite
 src/db/sessions.db
 
+# Uploaded files
+src/public/uploads/tags/*
+!src/public/uploads/tags/.gitkeep
+

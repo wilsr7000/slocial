@@ -7,6 +7,9 @@ const createDOMPurify = require('dompurify');
 const { JSDOM } = require('jsdom');
 const eventTracker = require('./services/eventTracker');
 const passport = require('passport');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const window = new JSDOM('').window;
 const DOMPurify = createDOMPurify(window);
@@ -17,6 +20,43 @@ marked.setOptions({
   gfm: true,
   headerIds: false,
   mangle: false
+});
+
+// Configure multer for tag image uploads
+const tagImageStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = path.join(__dirname, 'public', 'uploads', 'tags');
+    // Ensure directory exists
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    // Generate unique filename with timestamp and random string
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'tag-' + uniqueSuffix + ext);
+  }
+});
+
+const tagImageUpload = multer({ 
+  storage: tagImageStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    // Accept only image files
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed (jpeg, jpg, png, gif, webp)'));
+    }
+  }
 });
 
 function buildRouter(db) {
@@ -1112,7 +1152,7 @@ function buildRouter(db) {
   });
   
   // Create a new tag
-  router.post('/tags/create', requireAuth, (req, res) => {
+  router.post('/tags/create', requireAuth, tagImageUpload.single('image_file'), (req, res) => {
     const { name, short_description, long_description, image_url, is_public } = req.body;
     const userId = req.session.user.id;
     
@@ -1126,6 +1166,16 @@ function buildRouter(db) {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
     
+    // Determine the image URL (uploaded file takes priority over URL input)
+    let finalImageUrl = null;
+    if (req.file) {
+      // If file was uploaded, use the uploaded file path
+      finalImageUrl = '/static/uploads/tags/' + req.file.filename;
+    } else if (image_url) {
+      // Otherwise use the provided URL if any
+      finalImageUrl = image_url;
+    }
+    
     try {
       // Begin transaction
       db.prepare('BEGIN').run();
@@ -1137,6 +1187,10 @@ function buildRouter(db) {
       
       if (existing) {
         db.prepare('ROLLBACK').run();
+        // Delete uploaded file if it exists
+        if (req.file) {
+          fs.unlinkSync(req.file.path);
+        }
         return res.redirect('/tags?error=' + encodeURIComponent('A tag with this name already exists'));
       }
       
@@ -1150,7 +1204,7 @@ function buildRouter(db) {
         short_description, // Use short_description for the main description field
         short_description,
         long_description || null,
-        image_url || null,
+        finalImageUrl,
         userId,
         is_public ? 1 : 0
       );
@@ -1177,6 +1231,14 @@ function buildRouter(db) {
     } catch (error) {
       db.prepare('ROLLBACK').run();
       console.error('Error creating tag:', error);
+      // Delete uploaded file if it exists
+      if (req.file) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (e) {
+          console.error('Failed to delete uploaded file:', e);
+        }
+      }
       res.redirect('/tags?error=' + encodeURIComponent('Failed to create tag'));
     }
   });
@@ -1299,10 +1361,10 @@ function buildRouter(db) {
   });
   
   // Edit tag (only for founders)
-  router.post('/tags/:id/edit', requireAuth, (req, res) => {
+  router.post('/tags/:id/edit', requireAuth, tagImageUpload.single('image_file'), (req, res) => {
     const tagId = req.params.id;
     const userId = req.session.user.id;
-    const { name, short_description, long_description, image_url, is_public } = req.body;
+    const { name, short_description, long_description, image_url, is_public, remove_image } = req.body;
     
     // Check if user is the founder
     if (!isTagFounder(userId, tagId)) {
@@ -1326,7 +1388,54 @@ function buildRouter(db) {
       `).get(name, tagId);
       
       if (existing) {
+        // Delete uploaded file if it exists
+        if (req.file) {
+          fs.unlinkSync(req.file.path);
+        }
         return res.redirect(`/tags/${tagId}/manage?error=` + encodeURIComponent('A tag with this name already exists'));
+      }
+      
+      // Get current tag to check for existing image
+      const currentTag = db.prepare('SELECT image_url FROM tags WHERE id = ?').get(tagId);
+      let finalImageUrl = currentTag.image_url;
+      
+      // Handle image updates
+      if (remove_image === 'true') {
+        // User wants to remove the image
+        finalImageUrl = null;
+        // Delete old local image if it exists
+        if (currentTag.image_url && currentTag.image_url.startsWith('/static/uploads/')) {
+          const oldImagePath = path.join(__dirname, 'public', currentTag.image_url.replace('/static/', ''));
+          try {
+            fs.unlinkSync(oldImagePath);
+          } catch (e) {
+            console.error('Failed to delete old image:', e);
+          }
+        }
+      } else if (req.file) {
+        // New file uploaded
+        finalImageUrl = '/static/uploads/tags/' + req.file.filename;
+        // Delete old local image if it exists
+        if (currentTag.image_url && currentTag.image_url.startsWith('/static/uploads/')) {
+          const oldImagePath = path.join(__dirname, 'public', currentTag.image_url.replace('/static/', ''));
+          try {
+            fs.unlinkSync(oldImagePath);
+          } catch (e) {
+            console.error('Failed to delete old image:', e);
+          }
+        }
+      } else if (image_url && image_url !== currentTag.image_url) {
+        // New URL provided
+        finalImageUrl = image_url;
+        // Delete old local image if switching from uploaded to URL
+        if (currentTag.image_url && currentTag.image_url.startsWith('/static/uploads/')) {
+          const oldImagePath = path.join(__dirname, 'public', currentTag.image_url.replace('/static/', ''));
+          try {
+            fs.unlinkSync(oldImagePath);
+          } catch (e) {
+            console.error('Failed to delete old image:', e);
+          }
+        }
       }
       
       // Update the tag
@@ -1347,7 +1456,7 @@ function buildRouter(db) {
         short_description, // Use short_description for the main description field
         short_description,
         long_description || null,
-        image_url || null,
+        finalImageUrl,
         is_public ? 1 : 0,
         tagId
       );
@@ -1356,6 +1465,14 @@ function buildRouter(db) {
       
     } catch (error) {
       console.error('Error updating tag:', error);
+      // Delete uploaded file if it exists
+      if (req.file) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (e) {
+          console.error('Failed to delete uploaded file:', e);
+        }
+      }
       res.redirect(`/tags/${tagId}/manage?error=` + encodeURIComponent('Failed to update tag'));
     }
   });

@@ -388,7 +388,7 @@
       <button class="close-modal" onclick="closeEditModal()">&times;</button>
     </div>
     
-    <form id="editTagForm" action="/tags/<%= tag.id %>/edit" method="POST">
+    <form id="editTagForm" action="/tags/<%= tag.id %>/edit" method="POST" enctype="multipart/form-data">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
       
       <div class="modal-body">
@@ -429,15 +429,50 @@
         </div>
         
         <div class="form-group">
-          <label for="imageUrl">Tag Image URL (optional)</label>
-          <input 
-            type="url" 
-            id="imageUrl" 
-            name="image_url" 
-            value="<%= tag.image_url || '' %>"
-            placeholder="https://example.com/image.jpg"
-          />
-          <div class="help-text">An image to represent this tag (square images work best)</div>
+          <label>Tag Image (optional)</label>
+          
+          <% if (tag.image_url) { %>
+            <div class="current-image" style="margin-bottom: 1rem;">
+              <p style="margin-bottom: 0.5rem; color: var(--muted, #666);">Current image:</p>
+              <img src="<%= tag.image_url %>" alt="Current tag image" style="max-width: 200px; max-height: 200px; border-radius: 8px; display: block; margin-bottom: 0.5rem;">
+              <label style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" name="remove_image" value="true">
+                <span style="color: #dc3545;">Remove current image</span>
+              </label>
+            </div>
+          <% } %>
+          
+          <div class="image-upload-options">
+            <div class="upload-tab-buttons">
+              <button type="button" class="upload-tab-edit active" data-tab="upload">Upload New Image</button>
+              <button type="button" class="upload-tab-edit" data-tab="url">Use URL</button>
+            </div>
+            
+            <div class="upload-tab-content" id="edit-upload-tab">
+              <input 
+                type="file" 
+                id="editImageFile" 
+                name="image_file" 
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                onchange="previewEditImage(this)"
+              />
+              <div class="help-text">Upload a new image (max 5MB, square images work best)</div>
+              <div id="editImagePreview" class="image-preview"></div>
+            </div>
+            
+            <div class="upload-tab-content" id="edit-url-tab" style="display: none;">
+              <input 
+                type="url" 
+                id="editImageUrl" 
+                name="image_url" 
+                value="<%= tag.image_url && !tag.image_url.startsWith('/static/') ? tag.image_url : '' %>"
+                placeholder="https://example.com/image.jpg"
+                onchange="previewEditImageUrl(this)"
+              />
+              <div class="help-text">Enter an image URL (square images work best)</div>
+              <div id="editUrlImagePreview" class="image-preview"></div>
+            </div>
+          </div>
         </div>
         
         <div class="form-group">
@@ -619,6 +654,88 @@
   [data-theme="dark"] .modal-content {
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
   }
+  
+  /* Image upload styles */
+  .image-upload-options {
+    margin-top: 0.5rem;
+  }
+  
+  .upload-tab-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .upload-tab-edit {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    background: var(--hover-bg, #f0f0f0);
+    border: 2px solid var(--border, #e0e0e0);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--fg, #333);
+    font-weight: 500;
+  }
+  
+  .upload-tab-edit:hover {
+    background: var(--border, #e0e0e0);
+  }
+  
+  .upload-tab-edit.active {
+    background: var(--primary-color, #6366f1);
+    color: white;
+    border-color: var(--primary-color, #6366f1);
+  }
+  
+  .upload-tab-content {
+    padding: 1rem;
+    background: var(--hover-bg, #f8f9fa);
+    border-radius: 8px;
+    border: 1px solid var(--border, #e0e0e0);
+  }
+  
+  input[type="file"] {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px dashed var(--border, #e0e0e0);
+    border-radius: 8px;
+    background: var(--bg, white);
+    color: var(--fg, #333);
+    cursor: pointer;
+  }
+  
+  input[type="file"]:hover {
+    border-color: var(--primary-color, #6366f1);
+  }
+  
+  .image-preview {
+    margin-top: 1rem;
+    text-align: center;
+  }
+  
+  .image-preview img {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .image-preview .remove-image {
+    display: inline-block;
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+  }
+  
+  .image-preview .remove-image:hover {
+    background: #c82333;
+  }
 </style>
 
 <script>
@@ -667,6 +784,87 @@
     updateCharCount('tagName', 'nameCount', 50);
     updateCharCount('shortDescription', 'shortCount', 100);
     updateCharCount('longDescription', 'longCount', 500);
+  }
+  
+  // Tab switching for edit modal
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.upload-tab-edit').forEach(tab => {
+      tab.addEventListener('click', function() {
+        const targetTab = this.dataset.tab;
+        
+        // Update active tab
+        document.querySelectorAll('.upload-tab-edit').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        
+        // Show/hide content
+        if (targetTab === 'upload') {
+          document.getElementById('edit-upload-tab').style.display = 'block';
+          document.getElementById('edit-url-tab').style.display = 'none';
+          // Clear URL input when switching to upload
+          document.getElementById('editImageUrl').value = '';
+          document.getElementById('editUrlImagePreview').innerHTML = '';
+        } else {
+          document.getElementById('edit-upload-tab').style.display = 'none';
+          document.getElementById('edit-url-tab').style.display = 'block';
+          // Clear file input when switching to URL
+          document.getElementById('editImageFile').value = '';
+          document.getElementById('editImagePreview').innerHTML = '';
+        }
+      });
+    });
+  });
+  
+  // Image preview for file upload (edit modal)
+  function previewEditImage(input) {
+    const preview = document.getElementById('editImagePreview');
+    preview.innerHTML = '';
+    
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      
+      // Check file size
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        input.value = '';
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        preview.innerHTML = `
+          <img src="${e.target.result}" alt="Preview">
+          <br>
+          <button type="button" class="remove-image" onclick="clearEditFileInput()">Remove Image</button>
+        `;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+  
+  // Image preview for URL (edit modal)
+  function previewEditImageUrl(input) {
+    const preview = document.getElementById('editUrlImagePreview');
+    preview.innerHTML = '';
+    
+    if (input.value) {
+      preview.innerHTML = `
+        <img src="${input.value}" alt="Preview" onload="this.style.display='block'" onerror="this.style.display='none'; alert('Failed to load image from URL');">
+        <br>
+        <button type="button" class="remove-image" onclick="clearEditUrlInput()">Remove Image</button>
+      `;
+    }
+  }
+  
+  // Clear file input (edit modal)
+  function clearEditFileInput() {
+    document.getElementById('editImageFile').value = '';
+    document.getElementById('editImagePreview').innerHTML = '';
+  }
+  
+  // Clear URL input (edit modal)
+  function clearEditUrlInput() {
+    document.getElementById('editImageUrl').value = '';
+    document.getElementById('editUrlImagePreview').innerHTML = '';
   }
 </script>
 <% } %>

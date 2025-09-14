@@ -33,6 +33,7 @@
     "jsonwebtoken": "^9.0.2",
     "marked": "^16.2.1",
     "morgan": "^1.10.1",
+    "multer": "^2.0.2",
     "passport": "^0.7.0",
     "passport-apple": "^2.0.2",
     "passport-google-oauth20": "^2.0.0"

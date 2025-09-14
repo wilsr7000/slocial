@@ -395,7 +395,7 @@
       <button class="close-modal" onclick="closeModal()">&times;</button>
     </div>
     
-    <form id="createTagForm" action="/tags/create" method="POST">
+    <form id="createTagForm" action="/tags/create" method="POST" enctype="multipart/form-data">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
       
       <div class="modal-body">
@@ -437,14 +437,38 @@
         </div>
         
         <div class="form-group">
-          <label for="imageUrl">Tag Image URL (optional)</label>
-          <input 
-            type="url" 
-            id="imageUrl" 
-            name="image_url" 
-            placeholder="https://example.com/image.jpg"
-          />
-          <div class="help-text">An image to represent this tag (square images work best)</div>
+          <label>Tag Image (optional)</label>
+          
+          <div class="image-upload-options">
+            <div class="upload-tab-buttons">
+              <button type="button" class="upload-tab active" data-tab="upload">Upload Image</button>
+              <button type="button" class="upload-tab" data-tab="url">Use URL</button>
+            </div>
+            
+            <div class="upload-tab-content" id="upload-tab">
+              <input 
+                type="file" 
+                id="imageFile" 
+                name="image_file" 
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                onchange="previewImage(this)"
+              />
+              <div class="help-text">Upload an image (max 5MB, square images work best)</div>
+              <div id="imagePreview" class="image-preview"></div>
+            </div>
+            
+            <div class="upload-tab-content" id="url-tab" style="display: none;">
+              <input 
+                type="url" 
+                id="imageUrl" 
+                name="image_url" 
+                placeholder="https://example.com/image.jpg"
+                onchange="previewImageUrl(this)"
+              />
+              <div class="help-text">Enter an image URL (square images work best)</div>
+              <div id="urlImagePreview" class="image-preview"></div>
+            </div>
+          </div>
         </div>
         
         <div class="form-group">
@@ -664,6 +688,88 @@
   [data-theme="dark"] .form-group textarea:focus {
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
   }
+  
+  /* Image upload styles */
+  .image-upload-options {
+    margin-top: 0.5rem;
+  }
+  
+  .upload-tab-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .upload-tab {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    background: var(--hover-bg, #f0f0f0);
+    border: 2px solid var(--border, #e0e0e0);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--fg, #333);
+    font-weight: 500;
+  }
+  
+  .upload-tab:hover {
+    background: var(--border, #e0e0e0);
+  }
+  
+  .upload-tab.active {
+    background: var(--primary-color, #6366f1);
+    color: white;
+    border-color: var(--primary-color, #6366f1);
+  }
+  
+  .upload-tab-content {
+    padding: 1rem;
+    background: var(--hover-bg, #f8f9fa);
+    border-radius: 8px;
+    border: 1px solid var(--border, #e0e0e0);
+  }
+  
+  input[type="file"] {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px dashed var(--border, #e0e0e0);
+    border-radius: 8px;
+    background: var(--bg, white);
+    color: var(--fg, #333);
+    cursor: pointer;
+  }
+  
+  input[type="file"]:hover {
+    border-color: var(--primary-color, #6366f1);
+  }
+  
+  .image-preview {
+    margin-top: 1rem;
+    text-align: center;
+  }
+  
+  .image-preview img {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .image-preview .remove-image {
+    display: inline-block;
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+  }
+  
+  .image-preview .remove-image:hover {
+    background: #c82333;
+  }
 </style>
 
 <script>
@@ -723,6 +829,85 @@
   // Initialize character counts when page loads
   if (document.getElementById('createTagModal')) {
     updateCharCounts();
+  }
+  
+  // Tab switching functionality
+  document.querySelectorAll('.upload-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      const targetTab = this.dataset.tab;
+      
+      // Update active tab
+      document.querySelectorAll('.upload-tab').forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+      
+      // Show/hide content
+      if (targetTab === 'upload') {
+        document.getElementById('upload-tab').style.display = 'block';
+        document.getElementById('url-tab').style.display = 'none';
+        // Clear URL input when switching to upload
+        document.getElementById('imageUrl').value = '';
+        document.getElementById('urlImagePreview').innerHTML = '';
+      } else {
+        document.getElementById('upload-tab').style.display = 'none';
+        document.getElementById('url-tab').style.display = 'block';
+        // Clear file input when switching to URL
+        document.getElementById('imageFile').value = '';
+        document.getElementById('imagePreview').innerHTML = '';
+      }
+    });
+  });
+  
+  // Image preview for file upload
+  function previewImage(input) {
+    const preview = document.getElementById('imagePreview');
+    preview.innerHTML = '';
+    
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      
+      // Check file size
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        input.value = '';
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        preview.innerHTML = `
+          <img src="${e.target.result}" alt="Preview">
+          <br>
+          <button type="button" class="remove-image" onclick="clearFileInput()">Remove Image</button>
+        `;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+  
+  // Image preview for URL
+  function previewImageUrl(input) {
+    const preview = document.getElementById('urlImagePreview');
+    preview.innerHTML = '';
+    
+    if (input.value) {
+      preview.innerHTML = `
+        <img src="${input.value}" alt="Preview" onload="this.style.display='block'" onerror="this.style.display='none'; alert('Failed to load image from URL');">
+        <br>
+        <button type="button" class="remove-image" onclick="clearUrlInput()">Remove Image</button>
+      `;
+    }
+  }
+  
+  // Clear file input
+  function clearFileInput() {
+    document.getElementById('imageFile').value = '';
+    document.getElementById('imagePreview').innerHTML = '';
+  }
+  
+  // Clear URL input
+  function clearUrlInput() {
+    document.getElementById('imageUrl').value = '';
+    document.getElementById('urlImagePreview').innerHTML = '';
   }
 </script>
 <% } %>
