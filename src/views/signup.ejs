@@ -10,12 +10,26 @@
     height: auto;
     display: block;
     margin: 0 auto;
-    transition: opacity 0.2s ease;
-    /* No border radius to show the full book */
+    transition: all 0.2s ease;
+    border: 1px solid var(--border, #e0e0e0);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    background: var(--card, white);
+    padding: 8px;
+  }
+  
+  [data-theme="dark"] .logo-image {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
   
   .logo-image:hover {
     opacity: 1;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  }
+  
+  [data-theme="dark"] .logo-image:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
   }
   
   .auth-container {
