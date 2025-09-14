@@ -9,28 +9,34 @@
     text-align: center;
     margin-bottom: 3rem;
     padding: 2rem 0;
-    background: linear-gradient(135deg, var(--primary-color, #6366f1) 0%, #8b5cf6 100%);
-    color: white;
-    border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
   }
   
   .tags-header h1 {
-    font-size: 3rem;
+    font-size: 2.5rem;
     margin-bottom: 1rem;
     font-weight: 700;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    color: var(--fg, #000);
   }
   
   .tags-header p {
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--muted, #666);
     margin-bottom: 1.5rem;
     font-size: 1.125rem;
   }
   
-  [data-theme="dark"] .tags-header {
-    background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  .tags-header .btn {
+    background: var(--fg, #000);
+    color: var(--bg, #fff);
+    border: 2px solid var(--fg, #000);
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    transition: all 0.2s;
+  }
+  
+  .tags-header .btn:hover {
+    background: transparent;
+    color: var(--fg, #000);
   }
   
   .alert {
@@ -80,10 +86,11 @@
   
   .tag-image-container {
     width: 100%;
-    height: 200px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    height: 180px;
+    background: var(--hover-bg, #f8f8f8);
     position: relative;
     overflow: hidden;
+    border-bottom: 1px solid var(--border, #e0e0e0);
   }
   
   .tag-image-container img {
@@ -98,27 +105,26 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 4rem;
-    color: rgba(255, 255, 255, 0.8);
-    background: linear-gradient(135deg, 
-      hsl(calc(var(--tag-index, 0) * 137.5deg), 70%, 60%) 0%, 
-      hsl(calc(var(--tag-index, 0) * 137.5deg + 30), 70%, 50%) 100%);
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--muted, #999);
+    background: var(--hover-bg, #f8f8f8);
   }
   
   .instant-badge {
     position: absolute;
     top: 1rem;
     right: 1rem;
-    background: #10b981;
-    color: white;
+    background: var(--bg, white);
+    color: var(--fg, #000);
+    border: 2px solid var(--fg, #000);
     padding: 0.25rem 0.75rem;
-    border-radius: 20px;
+    border-radius: 4px;
     font-size: 0.875rem;
     font-weight: 600;
     display: flex;
     align-items: center;
     gap: 0.25rem;
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
   }
   
   .instant-badge::before {
@@ -154,15 +160,15 @@
   }
   
   .tag-public {
-    background-color: rgba(40, 167, 69, 0.1);
-    color: #28a745;
-    border: 1px solid rgba(40, 167, 69, 0.2);
+    background-color: transparent;
+    color: var(--muted, #666);
+    border: 1px solid var(--border, #e0e0e0);
   }
   
   .tag-private {
-    background-color: rgba(220, 53, 69, 0.1);
-    color: #dc3545;
-    border: 1px solid rgba(220, 53, 69, 0.2);
+    background-color: var(--fg, #000);
+    color: var(--bg, #fff);
+    border: 1px solid var(--fg, #000);
   }
   
   .tag-description {
@@ -240,43 +246,57 @@
   
   .btn {
     padding: 0.5rem 1rem;
-    border: none;
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.875rem;
-    transition: opacity 0.2s;
+    transition: all 0.2s;
     text-decoration: none;
     display: inline-block;
     text-align: center;
+    background: var(--bg, white);
+    color: var(--fg, #000);
+    border: 1px solid var(--fg, #000);
   }
   
   .btn:hover {
-    opacity: 0.9;
+    background: var(--hover-bg, #f5f5f5);
   }
   
   .btn-primary {
-    background-color: #007bff;
-    color: white;
+    background: var(--fg, #000);
+    color: var(--bg, white);
+    border: 1px solid var(--fg, #000);
   }
   
   .btn-success {
-    background-color: #28a745;
-    color: white;
+    background: var(--fg, #000);
+    color: var(--bg, white);
+    border: 1px solid var(--fg, #000);
   }
   
   .btn-warning {
-    background-color: #ffc107;
-    color: #333;
+    background: transparent;
+    color: var(--fg, #000);
+    border: 2px solid var(--fg, #000);
   }
   
   .btn-danger {
-    background-color: #dc3545;
-    color: white;
+    background: var(--fg, #000);
+    color: var(--bg, white);
+    border: 1px solid var(--fg, #000);
   }
   
   .btn-secondary {
-    background-color: #6c757d;
-    color: white;
+    background: transparent;
+    color: var(--fg, #000);
+    border: 1px solid var(--border, #e0e0e0);
+  }
+  
+  .btn-primary:hover,
+  .btn-success:hover,
+  .btn-danger:hover {
+    background: transparent;
+    color: var(--fg, #000);
   }
   
   .btn:disabled {
@@ -285,12 +305,12 @@
   }
   
   .has-access {
-    color: #28a745;
+    color: var(--muted, #666);
     font-weight: 500;
   }
   
   .pending-request {
-    color: #ffc107;
+    color: var(--muted, #666);
     font-weight: 500;
   }
   
@@ -333,15 +353,15 @@
 
 <div class="tags-container">
   <div class="tags-header">
-    <h1>📚 Explore Knowledge Tags</h1>
+    <h1>Explore Tags</h1>
     <p>Discover curated collections of letters organized by passionate editors</p>
     <% if (user) { %>
-      <button class="btn btn-primary" id="createTagBtn" style="background: white; color: var(--primary-color); font-weight: 600; padding: 0.75rem 1.5rem; font-size: 1rem;">
-        ✨ Create Your Own Tag
+      <button class="btn" id="createTagBtn">
+        Create New Tag
       </button>
     <% } else { %>
       <div style="margin-top: 1.5rem;">
-        <a href="/signup" class="btn btn-primary" style="background: white; color: var(--primary-color); font-weight: 600; padding: 0.75rem 1.5rem; font-size: 1rem; text-decoration: none; display: inline-block;">
+        <a href="/signup" class="btn">
           Join to Create & Access Tags
         </a>
       </div>
@@ -349,9 +369,9 @@
   </div>
   
   <% if (!user) { %>
-    <div style="background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%); padding: 1.25rem; border-radius: 12px; margin-bottom: 2rem; text-align: center; box-shadow: 0 4px 12px rgba(251, 191, 36, 0.1);">
-      <strong style="color: #92400e; font-size: 1.1rem;">🔒 Limited Access as Visitor</strong>
-      <p style="color: #78350f; margin: 0.5rem 0 0 0;">
+    <div style="background: var(--hover-bg, #f5f5f5); padding: 1.25rem; border-radius: 8px; margin-bottom: 2rem; text-align: center; border: 1px solid var(--border, #e0e0e0);">
+      <strong style="color: var(--fg, #000); font-size: 1.1rem;">Limited Access as Visitor</strong>
+      <p style="color: var(--muted, #666); margin: 0.5rem 0 0 0;">
         You can only view content tagged as "Public". Create an account to explore all tags and request access to exclusive content.
       </p>
     </div>
@@ -873,9 +893,9 @@
   }
   
   .upload-tab.active {
-    background: var(--primary-color, #6366f1);
-    color: white;
-    border-color: var(--primary-color, #6366f1);
+    background: var(--fg, #000);
+    color: var(--bg, white);
+    border-color: var(--fg, #000);
   }
   
   .upload-tab-content {
@@ -896,7 +916,7 @@
   }
   
   input[type="file"]:hover {
-    border-color: var(--primary-color, #6366f1);
+    border-color: var(--fg, #000);
   }
   
   .image-preview {
@@ -915,16 +935,17 @@
     display: inline-block;
     margin-top: 0.5rem;
     padding: 0.25rem 0.75rem;
-    background: #dc3545;
-    color: white;
-    border: none;
+    background: var(--fg, #000);
+    color: var(--bg, white);
+    border: 1px solid var(--fg, #000);
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.875rem;
   }
   
   .image-preview .remove-image:hover {
-    background: #c82333;
+    background: transparent;
+    color: var(--fg, #000);
   }
 </style>
 
