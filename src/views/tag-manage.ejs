@@ -552,6 +552,25 @@
     border: 1px solid var(--border, #e0e0e0);
   }
   
+  /* Custom scrollbar styling */
+  .modal-content::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .modal-content::-webkit-scrollbar-track {
+    background: var(--hover-bg, #f1f1f1);
+    border-radius: 4px;
+  }
+  
+  .modal-content::-webkit-scrollbar-thumb {
+    background: var(--muted, #888);
+    border-radius: 4px;
+  }
+  
+  .modal-content::-webkit-scrollbar-thumb:hover {
+    background: var(--fg, #555);
+  }
+  
   .modal-header {
     display: flex;
     justify-content: space-between;
