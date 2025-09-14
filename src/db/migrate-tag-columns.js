@@ -2,7 +2,8 @@ const Database = require('better-sqlite3');
 const path = require('path');
 
 // Connect to database
-const db = new Database(path.join(__dirname, 'slocial.db'), { 
+const dbPath = process.env.SQLITE_FILE || path.join(__dirname, 'slocial.db');
+const db = new Database(dbPath, { 
   verbose: console.log 
 });
 
