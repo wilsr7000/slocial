@@ -13,13 +13,14 @@
     transition: all 0.2s ease;
     border: 1px solid var(--border, #e0e0e0);
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    background: var(--card, white);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    background: transparent;
     padding: 8px;
   }
   
   [data-theme="dark"] .logo-image {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    background: var(--card, #1a1a1a);
   }
   
   .logo-image:hover {
@@ -168,7 +169,7 @@
 </style>
 
 <div class="logo-container">
-  <img src="/static/images/Slocial-book.png" alt="Slocial" class="logo-image" />
+  <img src="/static/images/<%= typeof theme !== 'undefined' && theme === 'dark' ? 'Slocial-book.png' : 'Slocial-book-white.png' %>" alt="Slocial" class="logo-image" />
 </div>
 
 <div class="auth-container">

@@ -817,7 +817,13 @@ function buildRouter(db) {
     res.render('principles', { user: req.session.user });
   });
 
-  router.get('/signup', (req, res) => res.render('signup', { user: req.session.user, errors: [], values: {}, pageClass: 'auth' }));
+  router.get('/signup', (req, res) => res.render('signup', { 
+    user: req.session.user, 
+    errors: [], 
+    values: {}, 
+    pageClass: 'auth',
+    theme: req.cookies?.theme || 'light'
+  }));
   router.post('/signup',
     body('handle').isLength({ min: 3, max: 20 }).isAlphanumeric().withMessage('Handle must be alphanumeric 3-20'),
     body('email').isEmail(),
@@ -874,7 +880,13 @@ function buildRouter(db) {
     }
   );
 
-  router.get('/login', (req, res) => res.render('login', { user: req.session.user, errors: [], values: {}, pageClass: 'auth' }));
+  router.get('/login', (req, res) => res.render('login', { 
+    user: req.session.user, 
+    errors: [], 
+    values: {}, 
+    pageClass: 'auth',
+    theme: req.cookies?.theme || 'light'
+  }));
   router.post('/login',
     body('email').isEmail(),
     body('password').isLength({ min: 8 }),
