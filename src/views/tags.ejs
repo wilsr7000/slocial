@@ -240,6 +240,12 @@
 <div class="tags-container">
   <div class="tags-header">
     <h1>Browse Tags</h1>
+    <% if (!user) { %>
+      <p style="background: #fff3cd; color: #856404; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+        <strong>Note:</strong> As a visitor, you can only view letters tagged with "Public". 
+        <a href="/signup" style="color: #856404; text-decoration: underline;">Create an account</a> to request access to other tags.
+      </p>
+    <% } %>
     <p>Explore available tags and request access to view tagged content</p>
     
     <% if (message) { %>

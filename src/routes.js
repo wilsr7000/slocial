@@ -477,48 +477,58 @@ function buildRouter(db) {
     if (userId) {
       const user = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(userId);
       if (user && user.is_admin) return true;
+      
+      // Author can see their own letters
+      const letter = db.prepare('SELECT author_id FROM letters WHERE id = ?').get(letterId);
+      if (letter && letter.author_id === userId) return true;
+      
+      // Logged-in users: Check if user has permission to view at least one tag on the letter
+      const hasPermission = db.prepare(`
+        SELECT 1 
+        FROM letter_tags lt
+        JOIN tags t ON lt.tag_id = t.id
+        LEFT JOIN tag_permissions tp ON t.id = tp.tag_id
+        WHERE lt.letter_id = ?
+          AND t.is_active = 1
+          AND (
+            -- Public tags with universal permission
+            (tp.user_id IS NULL AND tp.permission_type = 'use' 
+             AND (tp.expires_at IS NULL OR tp.expires_at > datetime('now')))
+            -- User-specific permission
+            OR (tp.user_id = ? AND tp.permission_type = 'use'
+                AND (tp.expires_at IS NULL OR tp.expires_at > datetime('now')))
+          )
+        LIMIT 1
+      `).get(letterId, userId);
+      
+      return !!hasPermission;
+    } else {
+      // Non-logged-in users can ONLY see letters tagged with "public"
+      const hasPublicTag = db.prepare(`
+        SELECT 1 
+        FROM letter_tags lt
+        JOIN tags t ON lt.tag_id = t.id
+        WHERE lt.letter_id = ?
+          AND t.slug = 'public'
+          AND t.is_active = 1
+        LIMIT 1
+      `).get(letterId);
+      
+      return !!hasPublicTag;
     }
-    
-    // Author can see their own letters
-    const letter = db.prepare('SELECT author_id FROM letters WHERE id = ?').get(letterId);
-    if (letter && letter.author_id === userId) return true;
-    
-    // Check if user has permission to view at least one tag on the letter
-    const hasPermission = db.prepare(`
-      SELECT 1 
-      FROM letter_tags lt
-      JOIN tags t ON lt.tag_id = t.id
-      LEFT JOIN tag_permissions tp ON t.id = tp.tag_id
-      WHERE lt.letter_id = ?
-        AND t.is_active = 1
-        AND (
-          -- Public tags with universal permission
-          (tp.user_id IS NULL AND tp.permission_type = 'use' 
-           AND (tp.expires_at IS NULL OR tp.expires_at > datetime('now')))
-          -- User-specific permission
-          OR (tp.user_id = ? AND tp.permission_type = 'use'
-              AND (tp.expires_at IS NULL OR tp.expires_at > datetime('now')))
-        )
-      LIMIT 1
-    `).get(letterId, userId || -1);
-    
-    return !!hasPermission;
   }
   
   // Generate WHERE clause for tag-based visibility
   function getTagVisibilityCondition(userId, tableAlias = 'l') {
     if (!userId) {
-      // Non-logged in users can only see letters with public tags
+      // Non-logged in users can ONLY see letters tagged with "public"
       return `
         EXISTS (
           SELECT 1 FROM letter_tags lt
           JOIN tags t ON lt.tag_id = t.id
-          JOIN tag_permissions tp ON t.id = tp.tag_id
           WHERE lt.letter_id = ${tableAlias}.id
+            AND t.slug = 'public'
             AND t.is_active = 1
-            AND tp.user_id IS NULL
-            AND tp.permission_type = 'use'
-            AND (tp.expires_at IS NULL OR tp.expires_at > datetime('now'))
         )
       `;
     }
@@ -648,6 +658,7 @@ function buildRouter(db) {
     const pageSize = 10;
     const offset = (page - 1) * pageSize;
     const now = dayjs().toISOString();
+    const userId = req.session.user?.id || null;
     
     // Check if is_draft column exists
     let hasDraftColumn = false;
@@ -658,7 +669,10 @@ function buildRouter(db) {
       console.error('Error checking for is_draft column:', e);
     }
     
-    // Use appropriate query based on whether draft column exists
+    // Build tag visibility condition
+    const tagVisibilityCondition = getTagVisibilityCondition(userId, 'l');
+    
+    // Use appropriate query based on whether draft column exists - now with tag filtering
     const query = hasDraftColumn ? `
       SELECT l.*, u.handle, u.bio, u.avatar_url, u.is_slocialite,
         (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
@@ -668,6 +682,7 @@ function buildRouter(db) {
       JOIN users u ON u.id = l.author_id
       LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
       WHERE l.is_published = 1 AND l.is_draft = 0 AND l.publish_at <= @now
+        AND ${tagVisibilityCondition}
       ORDER BY l.publish_at DESC
       LIMIT @limit OFFSET @offset
     ` : `
@@ -679,16 +694,26 @@ function buildRouter(db) {
       JOIN users u ON u.id = l.author_id
       LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
       WHERE l.is_published = 1 AND l.publish_at <= @now
+        AND ${tagVisibilityCondition}
       ORDER BY l.publish_at DESC
       LIMIT @limit OFFSET @offset
     `;
     
-    const letters = db.prepare(query).all({ now, limit: pageSize, offset, uid: req.session.user?.id || -1 });
+    const letters = db.prepare(query).all({ now, limit: pageSize, offset, uid: userId || -1 });
     
-    // Check if there are more letters
+    // Add tags to each letter for display
+    letters.forEach(letter => {
+      letter.tags = getLetterTags(letter.id);
+    });
+    
+    // Check if there are more letters (also needs tag filtering for accurate count)
     const countQuery = hasDraftColumn ? 
-      'SELECT COUNT(*) as total FROM letters WHERE is_published = 1 AND is_draft = 0 AND publish_at <= ?' :
-      'SELECT COUNT(*) as total FROM letters WHERE is_published = 1 AND publish_at <= ?';
+      `SELECT COUNT(DISTINCT l.id) as total FROM letters l 
+       WHERE l.is_published = 1 AND l.is_draft = 0 AND l.publish_at <= ? 
+       AND ${tagVisibilityCondition}` :
+      `SELECT COUNT(DISTINCT l.id) as total FROM letters l 
+       WHERE l.is_published = 1 AND l.publish_at <= ? 
+       AND ${tagVisibilityCondition}`;
     const totalCount = db.prepare(countQuery).get(now).total;
     const hasMore = offset + letters.length < totalCount;
     
