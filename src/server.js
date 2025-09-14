@@ -285,6 +285,14 @@ app.use((req, res, next) => {
   if (req.path === '/auth/apple/callback') {
     return next();
   }
+  // For multipart forms, check CSRF token from query parameter
+  if ((req.path === '/tags/create' || req.path.match(/^\/tags\/\d+\/edit$/)) && req.method === 'POST') {
+    // Move CSRF token from query to body for the middleware to validate
+    if (req.query._csrf) {
+      req.body = req.body || {};
+      req.body._csrf = req.query._csrf;
+    }
+  }
   csrfProtection(req, res, next);
 });
 app.use((req, res, next) => {

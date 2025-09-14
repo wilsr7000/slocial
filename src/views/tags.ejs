@@ -561,8 +561,7 @@
       <button class="close-modal" onclick="closeModal()">&times;</button>
     </div>
     
-    <form id="createTagForm" action="/tags/create" method="POST" enctype="multipart/form-data">
-      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <form id="createTagForm" action="/tags/create?_csrf=<%= csrfToken %>" method="POST" enctype="multipart/form-data">
       
       <div class="modal-body">
         <div class="form-group">
