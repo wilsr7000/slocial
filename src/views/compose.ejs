@@ -529,6 +529,136 @@
   .writing-container.typing .writing-header {
     opacity: 0.1;
   }
+  
+  /* Tag selector styles */
+  .tag-selector-container {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border, #e5e5e5);
+    opacity: 0;
+    animation: fadeIn 0.8s ease forwards;
+    animation-delay: 0.8s;
+  }
+  
+  .tag-selector-label {
+    font-size: 13px;
+    color: var(--muted, #999);
+    margin-bottom: 12px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+  
+  .selected-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+    min-height: 32px;
+  }
+  
+  .selected-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--fg, #000);
+    color: var(--bg, #fff);
+    border-radius: 20px;
+    font-size: 13px;
+    animation: fadeIn 0.2s ease;
+  }
+  
+  .selected-tag button {
+    background: none;
+    border: none;
+    color: var(--bg, #fff);
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    font-size: 16px;
+    line-height: 1;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+  }
+  
+  .selected-tag button:hover {
+    opacity: 1;
+  }
+  
+  .tag-input-wrapper {
+    position: relative;
+  }
+  
+  .tag-search-input {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 14px;
+    border: 1px solid var(--border, #e5e5e5);
+    border-radius: 8px;
+    background: var(--card, white);
+    color: var(--fg, #333);
+    transition: all 0.2s ease;
+  }
+  
+  .tag-search-input:focus {
+    border-color: var(--fg, #333);
+  }
+  
+  .tag-suggestions {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--card, white);
+    border: 1px solid var(--border, #e5e5e5);
+    border-radius: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+  }
+  
+  [data-theme="dark"] .tag-suggestions {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  
+  .tag-suggestions.active {
+    display: block;
+  }
+  
+  .tag-suggestion {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+    border-bottom: 1px solid var(--border, #f0f0f0);
+  }
+  
+  .tag-suggestion:last-child {
+    border-bottom: none;
+  }
+  
+  .tag-suggestion:hover,
+  .tag-suggestion.selected {
+    background: var(--hover-bg, #f5f5f5);
+  }
+  
+  .tag-suggestion-name {
+    font-weight: 500;
+    color: var(--fg, #333);
+  }
+  
+  .tag-suggestion-desc {
+    font-size: 12px;
+    color: var(--muted, #666);
+    margin-top: 2px;
+  }
+  
+  .tag-suggestion-new {
+    font-style: italic;
+    color: var(--muted, #666);
+  }
 </style>
 
 <body class="writing-surface" data-theme="<%= typeof theme !== 'undefined' ? theme : 'light' %>">
@@ -566,6 +696,7 @@
     <form method="post" id="compose-form">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
       <input type="hidden" name="format" id="format-input" value="standard" />
+      <input type="hidden" name="tags" id="tags-input" value="" />
       
       <textarea 
         name="title"
@@ -585,6 +716,21 @@
         required
         id="body-input"
       ><%= values.body || '' %></textarea>
+      
+      <!-- Tag selector -->
+      <div class="tag-selector-container" id="tag-selector-container">
+        <div class="tag-selector-label">Tags (optional)</div>
+        <div class="selected-tags" id="selected-tags"></div>
+        <div class="tag-input-wrapper">
+          <input 
+            type="text" 
+            class="tag-search-input" 
+            id="tag-search-input" 
+            placeholder="Type to search or add tags..."
+          />
+          <div class="tag-suggestions" id="tag-suggestions"></div>
+        </div>
+      </div>
       
       <!-- Hidden submit buttons for form -->
       <button type="submit" name="action" value="publish" id="publish-btn" style="display:none;"></button>
@@ -1143,6 +1289,180 @@
       hidePreview();
       closeImageModal();
       formatPalette.classList.remove('active');
+      document.getElementById('tag-suggestions').classList.remove('active');
+    }
+  });
+  
+  // Tag selector functionality
+  let availableTags = [];
+  let selectedTags = [];
+  let selectedSuggestionIndex = -1;
+  
+  // Fetch available tags that user has access to
+  async function fetchAvailableTags() {
+    try {
+      const response = await fetch('/api/tags/available');
+      if (response.ok) {
+        availableTags = await response.json();
+      }
+    } catch (error) {
+      console.error('Error fetching tags:', error);
+    }
+  }
+  
+  // Initialize tags on load
+  fetchAvailableTags();
+  
+  const tagSearchInput = document.getElementById('tag-search-input');
+  const tagSuggestions = document.getElementById('tag-suggestions');
+  const selectedTagsContainer = document.getElementById('selected-tags');
+  const tagsHiddenInput = document.getElementById('tags-input');
+  
+  // Show suggestions when input is focused
+  tagSearchInput.addEventListener('focus', () => {
+    if (tagSearchInput.value.trim()) {
+      showTagSuggestions(tagSearchInput.value);
+    }
+  });
+  
+  // Handle tag search input
+  tagSearchInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim();
+    if (query) {
+      showTagSuggestions(query);
+    } else {
+      tagSuggestions.classList.remove('active');
+    }
+  });
+  
+  // Handle keyboard navigation in suggestions
+  tagSearchInput.addEventListener('keydown', (e) => {
+    const suggestions = tagSuggestions.querySelectorAll('.tag-suggestion');
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, suggestions.length - 1);
+      updateSelectedSuggestion(suggestions);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, 0);
+      updateSelectedSuggestion(suggestions);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (selectedSuggestionIndex >= 0 && suggestions[selectedSuggestionIndex]) {
+        suggestions[selectedSuggestionIndex].click();
+      } else if (tagSearchInput.value.trim()) {
+        // Add as new tag if no suggestion selected
+        addTag({ name: tagSearchInput.value.trim(), id: null, isNew: true });
+      }
+    } else if (e.key === 'Escape') {
+      tagSuggestions.classList.remove('active');
+      selectedSuggestionIndex = -1;
+    }
+  });
+  
+  function updateSelectedSuggestion(suggestions) {
+    suggestions.forEach((s, i) => {
+      if (i === selectedSuggestionIndex) {
+        s.classList.add('selected');
+      } else {
+        s.classList.remove('selected');
+      }
+    });
+  }
+  
+  function showTagSuggestions(query) {
+    const lowerQuery = query.toLowerCase();
+    
+    // Filter available tags that match the query and aren't already selected
+    const filteredTags = availableTags.filter(tag => 
+      !selectedTags.find(st => st.id === tag.id) &&
+      (tag.name.toLowerCase().includes(lowerQuery) || 
+       (tag.description && tag.description.toLowerCase().includes(lowerQuery)))
+    );
+    
+    // Build suggestions HTML
+    let html = '';
+    
+    // Show matching existing tags
+    filteredTags.slice(0, 5).forEach(tag => {
+      html += `
+        <div class="tag-suggestion" data-tag-id="${tag.id}" data-tag-name="${tag.name}">
+          <div class="tag-suggestion-name">#${tag.name}</div>
+          ${tag.description ? `<div class="tag-suggestion-desc">${tag.description}</div>` : ''}
+        </div>
+      `;
+    });
+    
+    // Option to create new tag if no exact match
+    const exactMatch = availableTags.find(tag => tag.name.toLowerCase() === lowerQuery);
+    if (!exactMatch && query.length > 0) {
+      html += `
+        <div class="tag-suggestion tag-suggestion-new" data-tag-name="${query}" data-new="true">
+          <div class="tag-suggestion-name">Create new tag: #${query}</div>
+        </div>
+      `;
+    }
+    
+    if (html) {
+      tagSuggestions.innerHTML = html;
+      tagSuggestions.classList.add('active');
+      selectedSuggestionIndex = -1;
+      
+      // Add click handlers to suggestions
+      tagSuggestions.querySelectorAll('.tag-suggestion').forEach(suggestion => {
+        suggestion.addEventListener('click', () => {
+          const tagId = suggestion.dataset.tagId;
+          const tagName = suggestion.dataset.tagName;
+          const isNew = suggestion.dataset.new === 'true';
+          
+          addTag({ id: tagId, name: tagName, isNew });
+        });
+      });
+    } else {
+      tagSuggestions.classList.remove('active');
+    }
+  }
+  
+  function addTag(tag) {
+    // Check if tag is already selected
+    if (selectedTags.find(st => st.name === tag.name)) {
+      return;
+    }
+    
+    selectedTags.push(tag);
+    updateSelectedTagsDisplay();
+    updateTagsHiddenInput();
+    
+    // Clear input and hide suggestions
+    tagSearchInput.value = '';
+    tagSuggestions.classList.remove('active');
+  }
+  
+  function removeTag(tagName) {
+    selectedTags = selectedTags.filter(t => t.name !== tagName);
+    updateSelectedTagsDisplay();
+    updateTagsHiddenInput();
+  }
+  
+  function updateSelectedTagsDisplay() {
+    selectedTagsContainer.innerHTML = selectedTags.map(tag => `
+      <div class="selected-tag">
+        #${tag.name}
+        <button type="button" onclick="removeTag('${tag.name}')" title="Remove tag">×</button>
+      </div>
+    `).join('');
+  }
+  
+  function updateTagsHiddenInput() {
+    // Store both IDs (for existing tags) and names (for new tags)
+    tagsHiddenInput.value = JSON.stringify(selectedTags);
+  }
+  
+  // Hide suggestions when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.tag-input-wrapper')) {
+      tagSuggestions.classList.remove('active');
     }
   });
 </script>

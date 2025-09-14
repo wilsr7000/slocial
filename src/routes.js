@@ -1337,6 +1337,28 @@ function buildRouter(db) {
     res.redirect('/tags?message=' + encodeURIComponent('Request cancelled'));
   });
   
+  // API endpoint to get tags available to the user
+  router.get('/api/tags/available', requireAuth, (req, res) => {
+    const userId = req.session.user.id;
+    
+    try {
+      // Get all tags the user has permission to use
+      const availableTags = db.prepare(`
+        SELECT DISTINCT t.id, t.name, t.description, t.short_description
+        FROM tags t
+        INNER JOIN tag_permissions tp ON t.id = tp.tag_id
+        WHERE tp.user_id = ? AND tp.permission_type IN ('use', 'edit', 'grant')
+        AND t.is_active = 1
+        ORDER BY t.name
+      `).all(userId);
+      
+      res.json(availableTags);
+    } catch (error) {
+      console.error('Error fetching available tags:', error);
+      res.status(500).json({ error: 'Failed to fetch tags' });
+    }
+  });
+  
   // Tag management page (for owners)
   router.get('/tags/:id/manage', requireAuth, (req, res) => {
     const tagId = req.params.id;
@@ -1675,7 +1697,7 @@ function buildRouter(db) {
       const errors = validationResult(req);
       if (!errors.isEmpty()) return res.status(400).render('compose', { user: req.session.user, errors: errors.array(), values: req.body, pageClass: 'compose' });
 
-      const { title, body, action, format = 'standard' } = req.body;
+      const { title, body, action, format = 'standard', tags } = req.body;
       const now = dayjs();
       
       if (action === 'draft') {
@@ -1747,10 +1769,77 @@ function buildRouter(db) {
               .run(req.session.user.id, title, body, format, publish_at, now);
           }
           
+          const letterId = info.lastInsertRowid;
+          
+          // Process tags if provided
+          if (tags) {
+            try {
+              const parsedTags = JSON.parse(tags);
+              
+              for (const tag of parsedTags) {
+                let tagId = tag.id;
+                
+                // If it's a new tag, create it first
+                if (tag.isNew || !tagId) {
+                  // Create slug from name
+                  const slug = tag.name.toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+                  
+                  // Check if tag with this name already exists
+                  const existingTag = db.prepare('SELECT id FROM tags WHERE name = ? COLLATE NOCASE').get(tag.name);
+                  
+                  if (existingTag) {
+                    tagId = existingTag.id;
+                  } else {
+                    // Create new tag
+                    const tagResult = db.prepare(`
+                      INSERT INTO tags (name, slug, created_by, is_public, is_active)
+                      VALUES (?, ?, ?, 1, 1)
+                    `).run(tag.name, slug, req.session.user.id);
+                    
+                    tagId = tagResult.lastInsertRowid;
+                    
+                    // Grant the creator permission to use the tag
+                    db.prepare(`
+                      INSERT INTO tag_permissions (tag_id, user_id, permission_type, granted_by)
+                      VALUES (?, ?, 'use', ?)
+                    `).run(tagId, req.session.user.id, req.session.user.id);
+                    
+                    // Add as owner
+                    db.prepare(`
+                      INSERT INTO tag_owners (tag_id, user_id, ownership_type)
+                      VALUES (?, ?, 'founder')
+                    `).run(tagId, req.session.user.id);
+                  }
+                }
+                
+                // Check if user has permission to use this tag
+                if (canUserUseTag(req.session.user.id, tagId)) {
+                  // Add tag to letter
+                  try {
+                    db.prepare(`
+                      INSERT INTO letter_tags (letter_id, tag_id, added_by)
+                      VALUES (?, ?, ?)
+                    `).run(letterId, tagId, req.session.user.id);
+                  } catch (e) {
+                    // Ignore duplicate tag assignments
+                    if (!e.message.includes('UNIQUE constraint failed')) {
+                      console.error('Error adding tag to letter:', e);
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error processing tags:', error);
+              // Continue anyway - letter is already saved
+            }
+          }
+          
           eventTracker.track('letter_create', {
             userId: req.session.user.id,
             sessionId: req.sessionID,
-            letterId: info.lastInsertRowid,
+            letterId: letterId,
             metadata: { title: title.slice(0, 50), wordCount: body.split(/\s+/).length, needsApproval }
           });
           
@@ -1764,7 +1853,7 @@ function buildRouter(db) {
             });
           }
           
-          res.redirect(`/letters/${info.lastInsertRowid}`);
+          res.redirect(`/letters/${letterId}`);
         } catch (error) {
           console.error('Error publishing letter:', error);
           return res.status(500).render('compose', { 
