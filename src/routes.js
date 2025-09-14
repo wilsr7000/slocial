@@ -1104,7 +1104,8 @@ function buildRouter(db) {
       user: req.session.user, 
       tags,
       message: req.query.message,
-      error: req.query.error
+      error: req.query.error,
+      csrfToken: req.csrfToken()
     });
   });
   
@@ -1220,7 +1221,8 @@ function buildRouter(db) {
       pendingRequests,
       permissions,
       owners,
-      message: req.query.message
+      message: req.query.message,
+      csrfToken: req.csrfToken()
     });
   });
   
