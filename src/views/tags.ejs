@@ -308,8 +308,13 @@
         <div class="tag-actions">
           <% if (user) { %>
             <% if (tag.is_owner) { %>
-              <a href="/tags/<%= tag.id %>/manage" class="btn btn-warning">
+              <a href="/tags/<%= tag.id %>/manage" class="btn btn-warning" style="position: relative;">
                 ⚙️ Manage
+                <% if (tag.pending_request_count > 0) { %>
+                  <span style="position: absolute; top: -8px; right: -8px; background: #dc3545; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold;">
+                    <%= tag.pending_request_count %>
+                  </span>
+                <% } %>
               </a>
             <% } else if (tag.has_access) { %>
               <span class="has-access">✅ You have access</span>

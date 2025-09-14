@@ -240,6 +240,13 @@
       <span>|</span>
       <span>📊 Usage: <%= tag.usage_count || 0 %></span>
     </div>
+    
+    <% if (pendingRequests && pendingRequests.length > 0) { %>
+      <div class="pending-notification">
+        <strong>📬 You have <%= pendingRequests.length %> pending access request<%= pendingRequests.length === 1 ? '' : 's' %></strong>
+        - scroll down to review
+      </div>
+    <% } %>
     <% 
       // Check if current user is the founder
       const isFounder = owners && owners.some(o => o.user_id === user.id && o.ownership_type === 'founder');
@@ -264,10 +271,17 @@
   
   <!-- Pending Access Requests -->
   <div class="section">
-    <h2 class="section-title">Pending Access Requests</h2>
+    <h2 class="section-title">
+      📋 Pending Access Requests 
+      <% if (pendingRequests && pendingRequests.length > 0) { %>
+        <span class="pending-badge">
+          <%= pendingRequests.length %>
+        </span>
+      <% } %>
+    </h2>
     
     <% if (pendingRequests && pendingRequests.length > 0) { %>
-      <div class="requests-list">
+      <div class="requests-list highlight-border">
         <% pendingRequests.forEach(request => { %>
           <div class="request-item">
             <div class="request-header">
@@ -735,6 +749,42 @@
   
   .image-preview .remove-image:hover {
     background: #c82333;
+  }
+  
+  /* Notification styles */
+  .pending-notification {
+    background: #fff3cd;
+    color: #856404;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+    border: 1px solid #ffeaa7;
+  }
+  
+  [data-theme="dark"] .pending-notification {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+    border-color: rgba(255, 193, 7, 0.3);
+  }
+  
+  .pending-badge {
+    background: #dc3545;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    margin-left: 0.5rem;
+    display: inline-block;
+  }
+  
+  .highlight-border {
+    border: 2px solid #ffc107 !important;
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.1);
+  }
+  
+  [data-theme="dark"] .highlight-border {
+    border-color: rgba(255, 193, 7, 0.5) !important;
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
   }
 </style>
 

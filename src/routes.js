@@ -1095,7 +1095,14 @@ function buildRouter(db) {
           WHEN o.user_id IS NOT NULL THEN 1
           ELSE 0
         END as is_owner,
-        tar.status as request_status
+        tar.status as request_status,
+        CASE
+          WHEN o.user_id IS NOT NULL THEN (
+            SELECT COUNT(*) FROM tag_access_requests 
+            WHERE tag_id = t.id AND status = 'pending'
+          )
+          ELSE 0
+        END as pending_request_count
       FROM tags t
       LEFT JOIN letter_tags lt ON t.id = lt.tag_id
       LEFT JOIN tag_owners o ON t.id = o.tag_id AND o.is_active = 1 AND o.user_id = ?
