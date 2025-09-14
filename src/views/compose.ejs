@@ -693,7 +693,7 @@
       </span>
     </div>
     
-    <form method="post" id="compose-form">
+    <form method="post" action="/compose" id="compose-form">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
       <input type="hidden" name="format" id="format-input" value="standard" />
       <input type="hidden" name="tags" id="tags-input" value="" />
@@ -727,6 +727,7 @@
             class="tag-search-input" 
             id="tag-search-input" 
             placeholder="Type to search or add tags..."
+            autocomplete="off"
           />
           <div class="tag-suggestions" id="tag-suggestions"></div>
         </div>
@@ -1192,11 +1193,19 @@
   
   // Actions
   function saveDraft() {
+    updateTagsHiddenInput();
     document.getElementById('draft-btn').click();
   }
   
   function publish() {
-    document.getElementById('publish-btn').click();
+    // Make sure tags are updated before submitting
+    updateTagsHiddenInput();
+    const publishBtn = document.getElementById('publish-btn');
+    if (!publishBtn) {
+      console.error('Publish button not found!');
+      return;
+    }
+    publishBtn.click();
   }
   
   // Auto-save functionality
@@ -1349,12 +1358,14 @@
       updateSelectedSuggestion(suggestions);
     } else if (e.key === 'Enter') {
       e.preventDefault();
+      e.stopPropagation(); // Stop the event from bubbling up and submitting the form
       if (selectedSuggestionIndex >= 0 && suggestions[selectedSuggestionIndex]) {
         suggestions[selectedSuggestionIndex].click();
       } else if (tagSearchInput.value.trim()) {
         // Add as new tag if no suggestion selected
         addTag({ name: tagSearchInput.value.trim(), id: null, isNew: true });
       }
+      return false; // Extra safety to prevent form submission
     } else if (e.key === 'Escape') {
       tagSuggestions.classList.remove('active');
       selectedSuggestionIndex = -1;
@@ -1464,5 +1475,22 @@
     if (!e.target.closest('.tag-input-wrapper')) {
       tagSuggestions.classList.remove('active');
     }
+  });
+  
+  // Ensure tags are properly set before form submission
+  document.getElementById('compose-form').addEventListener('submit', (e) => {
+    // Update the hidden tags input with the current selected tags
+    updateTagsHiddenInput();
+    
+    // Replace image placeholders in the body before submission
+    let finalBody = bodyInput.value;
+    for (const [imageId, base64Data] of Object.entries(uploadedImages)) {
+      const placeholderPattern = new RegExp(`\\(📷 ${imageId}\\)`, 'g');
+      finalBody = finalBody.replace(placeholderPattern, `(${base64Data})`);
+    }
+    bodyInput.value = finalBody;
+    
+    // Form will submit normally
+    return true;
   });
 </script>
