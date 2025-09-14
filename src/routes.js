@@ -1109,6 +1109,85 @@ function buildRouter(db) {
     });
   });
   
+  // Create a new tag
+  router.post('/tags/create', requireAuth, (req, res) => {
+    const { name, short_description, long_description, image_url, is_public } = req.body;
+    const userId = req.session.user.id;
+    
+    // Validate required fields
+    if (!name || !short_description) {
+      return res.redirect('/tags?error=' + encodeURIComponent('Tag name and short description are required'));
+    }
+    
+    // Create slug from name
+    const slug = name.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    
+    try {
+      // Begin transaction
+      db.prepare('BEGIN').run();
+      
+      // Check if tag with same name already exists (case-insensitive)
+      const existing = db.prepare(`
+        SELECT id FROM tags WHERE name COLLATE NOCASE = ?
+      `).get(name);
+      
+      if (existing) {
+        db.prepare('ROLLBACK').run();
+        return res.redirect('/tags?error=' + encodeURIComponent('A tag with this name already exists'));
+      }
+      
+      // Create the tag
+      const result = db.prepare(`
+        INSERT INTO tags (name, slug, description, short_description, long_description, image_url, created_by, is_public)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        name,
+        slug,
+        short_description, // Use short_description for the main description field
+        short_description,
+        long_description || null,
+        image_url || null,
+        userId,
+        is_public ? 1 : 0
+      );
+      
+      const tagId = result.lastInsertRowid;
+      
+      // Add creator as founder/owner
+      db.prepare(`
+        INSERT INTO tag_owners (tag_id, user_id, ownership_type, granted_by)
+        VALUES (?, ?, 'founder', ?)
+      `).run(tagId, userId, userId);
+      
+      // Grant creator all permissions
+      db.prepare(`
+        INSERT INTO tag_permissions (tag_id, user_id, permission_type, granted_by)
+        VALUES 
+          (?, ?, 'use', ?),
+          (?, ?, 'edit', ?),
+          (?, ?, 'delete', ?),
+          (?, ?, 'grant', ?)
+      `).run(
+        tagId, userId, userId,
+        tagId, userId, userId,
+        tagId, userId, userId,
+        tagId, userId, userId
+      );
+      
+      // Commit transaction
+      db.prepare('COMMIT').run();
+      
+      res.redirect('/tags?message=' + encodeURIComponent('Tag created successfully!'));
+      
+    } catch (error) {
+      db.prepare('ROLLBACK').run();
+      console.error('Error creating tag:', error);
+      res.redirect('/tags?error=' + encodeURIComponent('Failed to create tag'));
+    }
+  });
+  
   // Request access to a tag
   router.post('/tags/:id/request-access', requireAuth, (req, res) => {
     const tagId = req.params.id;
