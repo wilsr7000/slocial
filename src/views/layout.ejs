@@ -28,6 +28,46 @@
         localStorage.setItem('theme', cookieTheme);
       }
     </script>
+    <style>
+      .theme-toggle-fab {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transition: transform 0.2s, box-shadow 0.2s;
+        z-index: 1000;
+      }
+      
+      .theme-toggle-fab:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+      }
+      
+      .theme-toggle-fab:active {
+        transform: scale(0.95);
+      }
+      
+      @media (max-width: 768px) {
+        .theme-toggle-fab {
+          bottom: 1rem;
+          right: 1rem;
+          width: 48px;
+          height: 48px;
+          font-size: 1.25rem;
+        }
+      }
+    </style>
   </head>
   <body class="<%= (typeof pageClass !== 'undefined') ? pageClass : '' %>">
     <%- include('partials_nav') %>
@@ -48,6 +88,12 @@
         </nav>
       </div>
     </footer>
+    
+    <!-- Floating theme toggle button -->
+    <button class="theme-toggle-fab" onclick="toggleTheme()" aria-label="Toggle theme">
+      <span class="theme-icon">🌙</span>
+    </button>
+    
     <script>
       function toggleTheme() {
         const html = document.documentElement;
@@ -62,23 +108,23 @@
         date.setFullYear(date.getFullYear() + 1);
         document.cookie = `theme=${newTheme}; path=/; expires=${date.toUTCString()}; SameSite=Lax`;
         
-        // Update button text
-        const toggleBtn = document.querySelector('.theme-toggle');
+        // Update button icon
+        const toggleBtn = document.querySelector('.theme-toggle-fab');
         if (toggleBtn) {
           toggleBtn.innerHTML = newTheme === 'light' 
-            ? '<span class="theme-icon">🌙</span> Dark' 
-            : '<span class="theme-icon">☀️</span> Light';
+            ? '<span class="theme-icon">🌙</span>' 
+            : '<span class="theme-icon">☀️</span>';
         }
       }
       
-      // Initialize button text on load
+      // Initialize button icon on load
       document.addEventListener('DOMContentLoaded', () => {
-        const toggleBtn = document.querySelector('.theme-toggle');
+        const toggleBtn = document.querySelector('.theme-toggle-fab');
         const currentTheme = document.documentElement.getAttribute('data-theme');
         if (toggleBtn) {
           toggleBtn.innerHTML = currentTheme === 'light' 
-            ? '<span class="theme-icon">🌙</span> Dark' 
-            : '<span class="theme-icon">☀️</span> Light';
+            ? '<span class="theme-icon">🌙</span>' 
+            : '<span class="theme-icon">☀️</span>';
         }
       });
     </script>
