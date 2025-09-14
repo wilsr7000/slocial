@@ -18,7 +18,22 @@
     padding: 8px;
   }
   
-  [data-theme="dark"] .logo-image {
+  /* Show light image by default, hide dark */
+  .logo-light {
+    display: block;
+  }
+  
+  .logo-dark {
+    display: none;
+  }
+  
+  /* In dark mode, hide light and show dark */
+  [data-theme="dark"] .logo-light {
+    display: none;
+  }
+  
+  [data-theme="dark"] .logo-dark {
+    display: block;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     background: var(--card, #1a1a1a);
   }
@@ -168,8 +183,17 @@
   }
 </style>
 
+<script>
+  // Set theme on body for signup page
+  (function() {
+    const theme = localStorage.getItem('theme') || '<%= typeof theme !== "undefined" ? theme : "light" %>';
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
+
 <div class="logo-container">
-  <img src="/static/images/<%= typeof theme !== 'undefined' && theme === 'dark' ? 'Slocial-book.png' : 'Slocial-book-white.png' %>" alt="Slocial" class="logo-image" />
+  <img src="/static/images/Slocial-book-white.png" alt="Slocial" class="logo-image logo-light" />
+  <img src="/static/images/Slocial-book.png" alt="Slocial" class="logo-image logo-dark" />
 </div>
 
 <div class="auth-container">
