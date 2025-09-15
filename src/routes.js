@@ -10,6 +10,8 @@ const passport = require('passport');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 const window = new JSDOM('').window;
 const DOMPurify = createDOMPurify(window);
@@ -22,23 +24,51 @@ marked.setOptions({
   mangle: false
 });
 
-// Configure multer for tag image uploads
-const tagImageStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, 'public', 'uploads', 'tags');
-    // Ensure directory exists
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
+// Configure Cloudinary (only if credentials are provided)
+let tagImageStorage;
+
+if (process.env.CLOUDINARY_CLOUD_NAME && 
+    process.env.CLOUDINARY_API_KEY && 
+    process.env.CLOUDINARY_API_SECRET) {
+  
+  // Configure Cloudinary
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+  });
+
+  // Use Cloudinary storage
+  tagImageStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+      folder: 'slocial/tags',
+      allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+      transformation: [{ width: 800, height: 800, crop: 'limit' }],
+      // Generate unique public_id
+      public_id: (req, file) => 'tag-' + Date.now() + '-' + Math.round(Math.random() * 1E9)
     }
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-    // Generate unique filename with timestamp and random string
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, 'tag-' + uniqueSuffix + ext);
-  }
-});
+  });
+} else {
+  // Fallback to local storage (for development)
+  console.log('Cloudinary not configured. Using local storage for images.');
+  tagImageStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      const uploadPath = path.join(__dirname, 'public', 'uploads', 'tags');
+      // Ensure directory exists
+      if (!fs.existsSync(uploadPath)) {
+        fs.mkdirSync(uploadPath, { recursive: true });
+      }
+      cb(null, uploadPath);
+    },
+    filename: function (req, file, cb) {
+      // Generate unique filename with timestamp and random string
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const ext = path.extname(file.originalname);
+      cb(null, 'tag-' + uniqueSuffix + ext);
+    }
+  });
+}
 
 const tagImageUpload = multer({ 
   storage: tagImageStorage,
@@ -1420,8 +1450,14 @@ function buildRouter(db) {
     // Determine the image URL (uploaded file takes priority over URL input)
     let finalImageUrl = null;
     if (req.file) {
-      // If file was uploaded, use the uploaded file path
-      finalImageUrl = '/static/uploads/tags/' + req.file.filename;
+      // If file was uploaded
+      if (req.file.path) {
+        // Cloudinary storage provides the URL in path
+        finalImageUrl = req.file.path;
+      } else {
+        // Local storage uses filename
+        finalImageUrl = '/static/uploads/tags/' + req.file.filename;
+      }
     } else if (image_url) {
       // Otherwise use the provided URL if any
       finalImageUrl = image_url;
@@ -1939,14 +1975,20 @@ function buildRouter(db) {
         }
       } else if (req.file) {
         // New file uploaded
-        finalImageUrl = '/static/uploads/tags/' + req.file.filename;
-        // Delete old local image if it exists
-        if (currentTag.image_url && currentTag.image_url.startsWith('/static/uploads/')) {
-          const oldImagePath = path.join(__dirname, 'public', currentTag.image_url.replace('/static/', ''));
-          try {
-            fs.unlinkSync(oldImagePath);
-          } catch (e) {
-            console.error('Failed to delete old image:', e);
+        if (req.file.path) {
+          // Cloudinary storage provides the URL in path
+          finalImageUrl = req.file.path;
+        } else {
+          // Local storage uses filename
+          finalImageUrl = '/static/uploads/tags/' + req.file.filename;
+          // Delete old local image if it exists
+          if (currentTag.image_url && currentTag.image_url.startsWith('/static/uploads/')) {
+            const oldImagePath = path.join(__dirname, 'public', currentTag.image_url.replace('/static/', ''));
+            try {
+              fs.unlinkSync(oldImagePath);
+            } catch (e) {
+              console.error('Failed to delete old image:', e);
+            }
           }
         }
       } else if (image_url && image_url !== currentTag.image_url) {
