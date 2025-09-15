@@ -2,10 +2,11 @@
 <html lang="en" data-theme="<%= typeof theme !== 'undefined' ? theme : 'light' %>">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
     <title><%= typeof pageTitle !== 'undefined' ? pageTitle : 'Slocial' %></title>
     <link rel="stylesheet" href="/static/css/styles.css" />
     <link rel="stylesheet" href="/static/css/author-glow.css" />
+    <link rel="stylesheet" href="/static/css/mobile.css" />
     <link rel="icon" href="data:," />
     <script>
       // Check for saved theme preference from cookie, localStorage, or default to 'light'

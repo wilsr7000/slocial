@@ -1,0 +1,672 @@
+/* Mobile-First Responsive CSS for Slocial */
+
+/* ========================================
+   1. BASE MOBILE STYLES (Mobile First)
+   ======================================== */
+
+/* Ensure proper viewport scaling */
+html {
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Better touch targets for mobile */
+button, 
+a.btn,
+input[type="submit"],
+input[type="button"] {
+  min-height: 44px; /* iOS recommended touch target */
+  min-width: 44px;
+  touch-action: manipulation; /* Prevent zoom on double tap */
+}
+
+/* Improve form inputs for mobile */
+input,
+textarea,
+select {
+  font-size: 16px; /* Prevents zoom on iOS */
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Better spacing for mobile */
+.container {
+  padding: 12px;
+  max-width: 100%;
+}
+
+/* ========================================
+   2. NAVIGATION - MOBILE OPTIMIZED
+   ======================================== */
+
+/* Mobile navigation overhaul */
+@media (max-width: 639px) {
+  .nav {
+    padding: 8px 12px;
+    gap: 4px;
+    position: fixed;
+    width: 100%;
+    top: 0;
+    z-index: 1000;
+  }
+  
+  /* Push content down to account for fixed nav */
+  body {
+    padding-top: 60px;
+  }
+  
+  .nav-left,
+  .nav-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .nav-left {
+    order: 1;
+  }
+  
+  .nav-right {
+    order: 2;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  
+  /* Hide member count on mobile */
+  .nav-left .member-count {
+    display: none !important;
+  }
+  
+  /* Better spacing for nav links */
+  .nav a {
+    padding: 8px 4px;
+    margin: 0 4px;
+  }
+  
+  /* Optimize dropdown for mobile */
+  .nav-dropdown-menu {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    width: 100%;
+    border-radius: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .nav-dropdown-menu a {
+    padding: 16px;
+    font-size: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  /* Mobile handle display */
+  .nav .handle {
+    display: none; /* Hide on mobile to save space */
+  }
+}
+
+/* ========================================
+   3. FEED & LETTERS - MOBILE OPTIMIZED
+   ======================================== */
+
+@media (max-width: 639px) {
+  .feed .letter {
+    margin: 8px 0;
+    padding: 12px;
+    border-radius: 8px;
+  }
+  
+  .feed .letter h2 {
+    font-size: 18px;
+    line-height: 1.3;
+    margin: 8px 0;
+  }
+  
+  .feed .letter .meta {
+    font-size: 11px;
+  }
+  
+  /* Better touch targets for letter actions */
+  .feed .letter .actions {
+    gap: 8px;
+    margin-top: 12px;
+  }
+  
+  .feed .letter .actions button,
+  .feed .letter .actions .btn {
+    padding: 10px 16px;
+    font-size: 14px;
+    flex: 1;
+    min-width: auto;
+  }
+  
+  /* Stack author info on mobile */
+  .feed-author {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  /* Format badges optimized for mobile */
+  .format-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+}
+
+/* ========================================
+   4. MODALS - MOBILE OPTIMIZED
+   ======================================== */
+
+@media (max-width: 639px) {
+  .modal-content {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    padding: 1rem;
+    margin: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  }
+  
+  .modal-header h2 {
+    font-size: 1.25rem;
+  }
+  
+  .close-modal {
+    font-size: 1.75rem;
+    padding: 8px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  
+  .modal-footer {
+    position: sticky;
+    bottom: 0;
+    background: var(--card);
+    padding: 1rem;
+    margin: -1rem;
+    margin-top: 1rem;
+    border-top: 2px solid var(--border);
+  }
+  
+  .modal-footer button {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+}
+
+/* ========================================
+   5. FORMS - MOBILE OPTIMIZED
+   ======================================== */
+
+@media (max-width: 639px) {
+  /* Stack form elements */
+  form {
+    gap: 16px;
+  }
+  
+  /* Full-width buttons on mobile */
+  form button[type="submit"],
+  form .btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+  }
+  
+  /* Better textarea for mobile */
+  textarea {
+    min-height: 120px;
+    resize: vertical;
+  }
+  
+  /* Character counter positioning */
+  .char-count {
+    font-size: 11px;
+    text-align: right;
+    margin-top: 4px;
+  }
+  
+  /* Radio and checkbox improvements */
+  input[type="radio"],
+  input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    margin-right: 8px;
+  }
+  
+  /* Form labels */
+  label {
+    font-size: 14px;
+    margin-bottom: 6px;
+    display: block;
+  }
+}
+
+/* ========================================
+   6. COMPOSE PAGE - MOBILE OPTIMIZED
+   ======================================== */
+
+@media (max-width: 639px) {
+  /* Compose form improvements */
+  .compose-container {
+    padding: 8px;
+  }
+  
+  .compose-form textarea {
+    min-height: 200px;
+    font-size: 16px;
+  }
+  
+  /* Tag selector for mobile */
+  .tag-selector {
+    margin-top: 12px;
+  }
+  
+  .tag-search-input {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+  }
+  
+  .tag-suggestions {
+    max-height: 150px;
+    position: static;
+    margin-top: 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  
+  .selected-tags {
+    gap: 6px;
+    margin-top: 8px;
+  }
+  
+  .tag-pill {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  
+  /* Stack buttons on mobile */
+  .compose-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .compose-actions button {
+    width: 100%;
+  }
+}
+
+/* ========================================
+   7. PROFILE PAGE - MOBILE OPTIMIZED
+   ======================================== */
+
+@media (max-width: 639px) {
+  .profile-container {
+    padding: 12px;
+  }
+  
+  .profile-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .profile-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  .stat-item {
+    text-align: center;
+    padding: 12px;
+    background: var(--hover-bg);
+    border-radius: 8px;
+  }
+  
+  .stat-value {
+    font-size: 20px;
+    font-weight: bold;
+    display: block;
+  }
+  
+  .stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+}
+
+/* ========================================
+   8. MOSAICS/TAGS - MOBILE OPTIMIZED
+   ======================================== */
+
+@media (max-width: 639px) {
+  /* Tag grid for mobile */
+  .tags-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 12px;
+  }
+  
+  .tag-card {
+    padding: 16px;
+  }
+  
+  .tag-image-container {
+    height: 120px;
+    margin-bottom: 12px;
+  }
+  
+  .tag-name {
+    font-size: 18px;
+  }
+  
+  .tag-description {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  
+  .tag-actions {
+    margin-top: 12px;
+  }
+  
+  .tag-actions button,
+  .tag-actions .btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 14px;
+  }
+  
+  /* Instant badge positioning */
+  .instant-badge {
+    font-size: 10px;
+    padding: 4px 8px;
+    top: 8px;
+    right: 8px;
+  }
+}
+
+/* ========================================
+   9. LOGIN/SIGNUP - MOBILE OPTIMIZED
+   ======================================== */
+
+@media (max-width: 639px) {
+  .auth-container {
+    padding: 20px 16px;
+    min-height: calc(100vh - 60px);
+  }
+  
+  .auth-box {
+    width: 100%;
+    max-width: 100%;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: none;
+    border: 1px solid var(--border);
+  }
+  
+  .logo-container {
+    margin-bottom: 20px;
+  }
+  
+  .logo-image {
+    max-width: 120px;
+    height: auto;
+  }
+  
+  .auth-title {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+  
+  .oauth-btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+  
+  .divider {
+    margin: 20px 0;
+    font-size: 12px;
+  }
+}
+
+/* ========================================
+   10. FOOTER - MOBILE OPTIMIZED
+   ======================================== */
+
+@media (max-width: 639px) {
+  footer {
+    position: relative; /* Not fixed on mobile */
+    margin-top: 40px;
+  }
+  
+  .footer-inner {
+    padding: 16px 12px;
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+  
+  .footer-nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+  
+  .footer-nav a {
+    padding: 4px 8px;
+    font-size: 13px;
+  }
+  
+  .theme-toggle {
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+  }
+}
+
+/* ========================================
+   11. UTILITIES & HELPERS
+   ======================================== */
+
+/* Hide on mobile */
+@media (max-width: 639px) {
+  .mobile-hide {
+    display: none !important;
+  }
+}
+
+/* Show only on mobile */
+.mobile-only {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  .mobile-only {
+    display: block;
+  }
+}
+
+/* Better scrolling on mobile */
+@media (max-width: 639px) {
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Prevent horizontal scroll */
+  body {
+    overflow-x: hidden;
+  }
+  
+  /* Ensure content doesn't overflow */
+  img, 
+  video, 
+  iframe {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* ========================================
+   12. READING PAGE - MOBILE OPTIMIZED
+   ======================================== */
+
+@media (max-width: 639px) {
+  /* Letter content */
+  .letter-content {
+    font-size: 15px;
+    line-height: 1.6;
+    padding: 12px;
+  }
+  
+  .letter-content p {
+    margin-bottom: 1em;
+  }
+  
+  /* Reading status buttons */
+  .reading-status {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    padding: 12px;
+    display: flex;
+    gap: 8px;
+    z-index: 100;
+  }
+  
+  .reading-status button {
+    flex: 1;
+    padding: 12px 8px;
+    font-size: 13px;
+  }
+  
+  /* Adjust content for fixed reading bar */
+  .letter-page {
+    padding-bottom: 80px;
+  }
+}
+
+/* ========================================
+   13. ABOUT PAGE - MOBILE OPTIMIZED
+   ======================================== */
+
+@media (max-width: 639px) {
+  .about-container {
+    padding: 16px;
+  }
+  
+  .about-section {
+    margin-bottom: 32px;
+  }
+  
+  .about-section h2 {
+    font-size: 20px;
+    margin-bottom: 12px;
+  }
+  
+  .quote-block {
+    padding: 16px;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  
+  .principles-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .principle-card {
+    padding: 16px;
+  }
+  
+  .principle-card h3 {
+    font-size: 16px;
+  }
+  
+  .principle-card p {
+    font-size: 13px;
+  }
+  
+  /* Mosaic animation - simpler on mobile */
+  .mosaic-container {
+    height: 150px;
+    margin: 20px 0;
+  }
+  
+  .mosaic-piece {
+    font-size: 1.2rem !important;
+  }
+}
+
+/* ========================================
+   14. PERFORMANCE OPTIMIZATIONS
+   ======================================== */
+
+@media (max-width: 639px) {
+  /* Reduce animations on mobile for better performance */
+  * {
+    animation-duration: 0.2s !important;
+  }
+  
+  /* Disable hover effects on touch devices */
+  @media (hover: none) {
+    .feed .letter:hover {
+      transform: none;
+      box-shadow: 0 1px 2px var(--shadow-light), 0 6px 18px var(--shadow-heavy);
+    }
+    
+    button:hover,
+    .btn:hover {
+      background: var(--card);
+    }
+  }
+}
+
+/* ========================================
+   15. TABLET STYLES (640px - 1024px)
+   ======================================== */
+
+@media (min-width: 640px) and (max-width: 1024px) {
+  .container {
+    max-width: 100%;
+    padding: 20px;
+  }
+  
+  .tags-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .modal-content {
+    width: 80%;
+    max-width: 600px;
+  }
+  
+  .nav {
+    padding: 12px 20px;
+  }
+}
