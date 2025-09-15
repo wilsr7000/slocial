@@ -1832,14 +1832,14 @@ function buildRouter(db) {
     });
   });
   
-  // Tag management page (for owners)
+  // Mosaic management page (for owners)
   router.get('/tags/:id/manage', requireAuth, (req, res) => {
     const tagId = req.params.id;
     const userId = req.session.user.id;
     
     // Check if user is owner
     if (!isTagOwner(userId, tagId)) {
-      return res.status(403).send('You are not an owner of this tag');
+      return res.status(403).send('You are not an owner of this mosaic');
     }
     
     // Get tag details
@@ -1880,11 +1880,12 @@ function buildRouter(db) {
       permissions,
       owners,
       message: req.query.message,
-      csrfToken: req.csrfToken()
+      csrfToken: req.csrfToken(),
+      pageTitle: `Manage ${tag.name} - Mosaic`
     });
   });
   
-  // Edit tag (only for founders)
+  // Edit mosaic (only for founders)
   router.post('/tags/:id/edit', requireAuth, tagImageUpload.single('image_file'), (req, res) => {
     const tagId = req.params.id;
     const userId = req.session.user.id;
@@ -1892,12 +1893,12 @@ function buildRouter(db) {
     
     // Check if user is the founder
     if (!isTagFounder(userId, tagId)) {
-      return res.status(403).send('Only the tag founder can edit tag details');
+      return res.status(403).send('Only the mosaic founder can edit mosaic details');
     }
     
     // Validate required fields
     if (!name || !short_description) {
-      return res.redirect(`/tags/${tagId}/manage?error=` + encodeURIComponent('Tag name and short description are required'));
+      return res.redirect(`/tags/${tagId}/manage?error=` + encodeURIComponent('Mosaic name and short description are required'));
     }
     
     // Create slug from name
