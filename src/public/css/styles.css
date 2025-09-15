@@ -353,6 +353,8 @@ pre{white-space:pre-wrap;margin:0}
 .btn-primary{border-color:transparent;background:var(--fg);color:var(--bg)}
 .btn-primary:hover{filter:brightness(1.05)}
 .btn-ghost{background:transparent;color:var(--fg)}
+.btn-danger{border-color:#dc3545;background:#dc3545;color:white}
+.btn-danger:hover{background:#c82333;border-color:#bd2130}
 
 .section-title{font-size:18px;color:var(--muted);margin:8px 0 6px 0}
 

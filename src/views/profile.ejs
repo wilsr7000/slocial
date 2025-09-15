@@ -31,6 +31,109 @@
     border-radius: 8px;
     margin-bottom: 20px;
   }
+  
+  .error-message {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+  
+  .reading-log-section {
+    max-width: 600px;
+    margin: 3rem auto;
+    padding: 2rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  
+  .reading-log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .reading-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .stat-item {
+    text-align: center;
+  }
+  
+  .stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--fg);
+    display: block;
+  }
+  
+  .stat-label {
+    font-size: 0.875rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 0.25rem;
+  }
+  
+  .reading-log-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+  
+  .delete-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .delete-modal.active {
+    display: flex;
+  }
+  
+  .delete-modal-content {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 400px;
+    text-align: center;
+  }
+  
+  .delete-modal-content h3 {
+    margin: 0 0 1rem 0;
+    color: #dc3545;
+  }
+  
+  .delete-modal-content p {
+    margin-bottom: 1.5rem;
+    color: var(--muted);
+  }
+  
+  .delete-modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+  }
 </style>
 
 <h1>Edit Profile</h1>
@@ -38,6 +141,18 @@
 <% if (typeof req !== 'undefined' && req.query.saved) { %>
   <div class="success-message">
     ✓ Profile updated successfully!
+  </div>
+<% } %>
+
+<% if (typeof req !== 'undefined' && req.query.deleted) { %>
+  <div class="success-message">
+    ✓ Reading log deleted successfully!
+  </div>
+<% } %>
+
+<% if (typeof req !== 'undefined' && req.query.error) { %>
+  <div class="error-message">
+    ✗ An error occurred. Please try again.
   </div>
 <% } %>
 
@@ -94,6 +209,87 @@
   </form>
 </div>
 
+<!-- Reading Log Section -->
+<% if (readingStats && readingStats.totalEntries > 0) { %>
+  <div class="reading-log-section">
+    <div class="reading-log-header">
+      <h2 style="margin: 0;">📚 Your Reading Log</h2>
+    </div>
+    
+    <div class="reading-stats">
+      <div class="stat-item">
+        <span class="stat-value"><%= readingStats.totalEntries %></span>
+        <span class="stat-label">Total Actions</span>
+      </div>
+      
+      <div class="stat-item">
+        <span class="stat-value"><%= readingStats.uniqueLetters %></span>
+        <span class="stat-label">Letters Viewed</span>
+      </div>
+      
+      <div class="stat-item">
+        <span class="stat-value">
+          <% if (readingStats.totalReadingTime) { %>
+            <%= Math.round(readingStats.totalReadingTime / 60) %>m
+          <% } else { %>
+            0m
+          <% } %>
+        </span>
+        <span class="stat-label">Reading Time</span>
+      </div>
+    </div>
+    
+    <% if (readingStats.actionCounts && readingStats.actionCounts.length > 0) { %>
+      <div style="margin-bottom: 1.5rem;">
+        <h4 style="margin-bottom: 0.75rem; color: var(--muted);">Activity Breakdown:</h4>
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.9rem;">
+          <% readingStats.actionCounts.forEach(item => { %>
+            <span style="background: var(--hover-bg); padding: 0.25rem 0.75rem; border-radius: 6px;">
+              <%= item.action %>: <%= item.count %>
+            </span>
+          <% }) %>
+        </div>
+      </div>
+    <% } %>
+    
+    <div class="reading-log-actions">
+      <a href="/profile/reading-log/download" class="btn btn-primary">
+        📥 Download CSV
+      </a>
+      <button class="btn btn-danger" onclick="showDeleteModal()">
+        🗑️ Delete Log
+      </button>
+    </div>
+  </div>
+<% } else { %>
+  <div class="reading-log-section">
+    <div class="reading-log-header">
+      <h2 style="margin: 0;">📚 Your Reading Log</h2>
+    </div>
+    <p style="text-align: center; color: var(--muted); margin: 2rem 0;">
+      Your reading log is empty. Start reading letters to track your activity!
+    </p>
+  </div>
+<% } %>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="delete-modal">
+  <div class="delete-modal-content">
+    <h3>⚠️ Delete Reading Log?</h3>
+    <p>
+      This will permanently delete all <%= readingStats ? readingStats.totalEntries : 0 %> entries from your reading log. 
+      This action cannot be undone.
+    </p>
+    <div class="delete-modal-actions">
+      <button class="btn" onclick="hideDeleteModal()">Cancel</button>
+      <form action="/profile/reading-log/delete" method="POST" style="display: inline;">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <button type="submit" class="btn btn-danger">Delete Permanently</button>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script>
   function updateAvatarPreview(url) {
     const preview = document.querySelector('.avatar-preview');
@@ -103,4 +299,19 @@
       preview.innerHTML = '<span style="font-size: 48px;">👤</span>';
     }
   }
+  
+  function showDeleteModal() {
+    document.getElementById('deleteModal').classList.add('active');
+  }
+  
+  function hideDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('active');
+  }
+  
+  // Close modal when clicking outside
+  document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      hideDeleteModal();
+    }
+  });
 </script>

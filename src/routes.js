@@ -1105,8 +1105,40 @@ function buildRouter(db) {
 
   // Profile routes
   router.get('/profile', requireAuth, (req, res) => {
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.session.user.id);
-    res.render('profile', { user: req.session.user, profile: user, errors: [], isAuthor: user.is_slocialite === 0, pageTitle: 'Slocial - Profile' });
+    const userId = req.session.user.id;
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    
+    // Get reading log stats
+    let readingStats = null;
+    try {
+      const totalEntries = db.prepare('SELECT COUNT(*) as count FROM reading_log WHERE user_id = ?').get(userId);
+      const uniqueLetters = db.prepare('SELECT COUNT(DISTINCT letter_id) as count FROM reading_log WHERE user_id = ?').get(userId);
+      const totalReadingTime = db.prepare('SELECT SUM(reading_time_seconds) as total FROM reading_log WHERE user_id = ? AND reading_time_seconds IS NOT NULL').get(userId);
+      const actionCounts = db.prepare(`
+        SELECT action, COUNT(*) as count 
+        FROM reading_log 
+        WHERE user_id = ? 
+        GROUP BY action
+      `).all(userId);
+      
+      readingStats = {
+        totalEntries: totalEntries?.count || 0,
+        uniqueLetters: uniqueLetters?.count || 0,
+        totalReadingTime: totalReadingTime?.total || 0,
+        actionCounts: actionCounts || []
+      };
+    } catch (error) {
+      console.error('Error fetching reading stats:', error);
+    }
+    
+    res.render('profile', { 
+      user: req.session.user, 
+      profile: user, 
+      errors: [], 
+      isAuthor: user.is_slocialite === 0,
+      readingStats,
+      pageTitle: 'Slocial - Profile' 
+    });
   });
 
   router.post('/profile', requireAuth,
@@ -1126,6 +1158,92 @@ function buildRouter(db) {
       res.redirect('/profile?saved=1');
     }
   );
+  
+  // Download reading log as CSV
+  router.get('/profile/reading-log/download', requireAuth, (req, res) => {
+    const userId = req.session.user.id;
+    
+    // Get all reading log entries for this user
+    const logs = db.prepare(`
+      SELECT 
+        rl.*,
+        l.title as current_title,
+        u.handle as current_author_handle
+      FROM reading_log rl
+      LEFT JOIN letters l ON l.id = rl.letter_id
+      LEFT JOIN users u ON u.id = rl.letter_author_id
+      WHERE rl.user_id = ?
+      ORDER BY rl.created_at DESC
+    `).all(userId);
+    
+    // Create CSV content
+    const csvHeaders = [
+      'Date',
+      'Action',
+      'Letter Title',
+      'Author',
+      'Reading Time (seconds)',
+      'Word Count',
+      'Tags',
+      'Source'
+    ];
+    
+    const csvRows = logs.map(log => {
+      const date = new Date(log.created_at).toISOString().split('T')[0];
+      const tags = log.letter_tags ? JSON.parse(log.letter_tags).join(', ') : '';
+      const source = log.referrer_type || 'unknown';
+      
+      return [
+        date,
+        log.action,
+        log.letter_title || log.current_title || 'Unknown',
+        log.letter_author_handle || log.current_author_handle || 'Unknown',
+        log.reading_time_seconds || '0',
+        log.letter_word_count || '0',
+        tags,
+        source
+      ].map(field => {
+        // Escape fields that contain commas or quotes
+        const str = String(field);
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      }).join(',');
+    });
+    
+    const csv = [csvHeaders.join(','), ...csvRows].join('\n');
+    
+    // Send CSV file
+    const filename = `slocial-reading-log-${new Date().toISOString().split('T')[0]}.csv`;
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+  });
+  
+  // Delete reading log
+  router.post('/profile/reading-log/delete', requireAuth, (req, res) => {
+    const userId = req.session.user.id;
+    
+    try {
+      // Delete all reading log entries for this user
+      const result = db.prepare('DELETE FROM reading_log WHERE user_id = ?').run(userId);
+      
+      // Track the deletion event
+      eventTracker.track('reading_log_deleted', {
+        userId,
+        sessionId: req.sessionID,
+        metadata: { 
+          entries_deleted: result.changes 
+        }
+      });
+      
+      res.redirect('/profile?deleted=1');
+    } catch (error) {
+      console.error('Error deleting reading log:', error);
+      res.redirect('/profile?error=1');
+    }
+  });
 
   router.get('/compose', requireAuth, (req, res) => {
     res.render('compose', { 
