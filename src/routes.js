@@ -710,7 +710,10 @@ function buildRouter(db) {
   });
 
   router.get('/about', (req, res) => {
-    res.render('about', { user: req.session.user });
+    res.render('about', { 
+      user: req.session.user,
+      pageTitle: 'Slocial - A Web Sight'
+    });
   });
   
   // Test endpoint to verify deployment

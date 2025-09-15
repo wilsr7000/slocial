@@ -1,5 +1,261 @@
-<h1>About Slocial</h1>
-<p>Slocial is a slow social network—a place for thoughtful letters that steep before they publish.</p>
-<p>We believe that good writing, like good tea, needs time to develop its full character. Every letter waits 12 hours before appearing, giving you space to reflect on what you've written.</p>
-<p>One letter per day keeps the pace human. No infinite scroll, no algorithmic feeds, just considered thoughts shared at a natural rhythm.</p>
-<p>Founded on the principle that the best conversations happen when we slow down.</p>
+<style>
+  .about-container {
+    max-width: 800px;
+    margin: 3rem auto;
+    padding: 0 2rem;
+    line-height: 1.8;
+  }
+  
+  .about-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid var(--border);
+  }
+  
+  .about-header h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    font-weight: 300;
+    letter-spacing: -1px;
+  }
+  
+  .about-subtitle {
+    font-size: 1.25rem;
+    color: var(--muted);
+    font-style: italic;
+  }
+  
+  .about-section {
+    margin-bottom: 3rem;
+  }
+  
+  .about-section h2 {
+    font-size: 1.75rem;
+    margin-bottom: 1.5rem;
+    font-weight: 400;
+    color: var(--fg);
+  }
+  
+  .about-section p {
+    margin-bottom: 1.5rem;
+    color: var(--fg);
+    font-size: 1.1rem;
+  }
+  
+  .mosaic-visual {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 2rem 0;
+  }
+  
+  .mosaic-piece {
+    aspect-ratio: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+  }
+  
+  .mosaic-piece:hover {
+    transform: scale(1.05);
+    background: var(--hover-bg);
+  }
+  
+  .quote-block {
+    background: var(--card);
+    border-left: 4px solid var(--primary-color);
+    padding: 1.5rem;
+    margin: 2rem 0;
+    font-style: italic;
+    border-radius: 0 8px 8px 0;
+  }
+  
+  .quote-block cite {
+    display: block;
+    margin-top: 1rem;
+    font-style: normal;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  
+  .principles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin: 2rem 0;
+  }
+  
+  .principle-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+  }
+  
+  .principle-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .principle-card h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+    color: var(--fg);
+  }
+  
+  .principle-card p {
+    font-size: 1rem;
+    color: var(--muted);
+    margin: 0;
+  }
+  
+  @media (max-width: 768px) {
+    .about-header h1 {
+      font-size: 2rem;
+    }
+    
+    .mosaic-visual {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>
+
+<div class="about-container">
+  <div class="about-header">
+    <h1>A Web Sight</h1>
+    <p class="about-subtitle">The medium is the massage — and here, the message marinates</p>
+  </div>
+
+  <div class="about-section">
+    <h2>The Mosaic Mind</h2>
+    <p>
+      Slocial is not a website but a <em>web sight</em> — a place where patterns emerge from fragments, 
+      where meaning assembles itself like a mosaic rather than flowing like a stream. 
+      In the spirit of Marshall McLuhan, we've built a cool medium that demands your participation, 
+      your pattern recognition, your ability to see the whole through its parts.
+    </p>
+    
+    <div class="mosaic-visual">
+      <div class="mosaic-piece">📖</div>
+      <div class="mosaic-piece">✍️</div>
+      <div class="mosaic-piece">🔲</div>
+      <div class="mosaic-piece">⏳</div>
+      <div class="mosaic-piece">💭</div>
+      <div class="mosaic-piece">🌐</div>
+    </div>
+    
+    <p>
+      Each letter is a tessera in a larger mosaic. Each mosaic reveals patterns that linear thinking cannot capture. 
+      This is acoustic space, not visual space — simultaneous, not sequential.
+    </p>
+  </div>
+
+  <div class="about-section">
+    <h2>The 12-Hour Steep</h2>
+    
+    <div class="quote-block">
+      "We shape our tools and thereafter they shape us."
+      <cite>— Marshall McLuhan</cite>
+    </div>
+    
+    <p>
+      Every letter waits 12 hours before appearing — not as a limitation, but as a feature. 
+      This delay transforms the medium itself. In a world of hot takes, we offer cool contemplation. 
+      The pause changes not just what we write, but how we think about writing.
+    </p>
+    
+    <p>
+      Time becomes part of the message. The delay is the design. The waiting is the writing.
+    </p>
+  </div>
+
+  <div class="about-section">
+    <h2>Mosaics, Not Categories</h2>
+    <p>
+      We don't have tags or categories — we have mosaics. Each mosaic is a pattern of meaning 
+      curated by passionate editors who see connections where algorithms see only keywords. 
+      These are not filing systems but constellations of thought, each piece illuminating the others.
+    </p>
+    
+    <p>
+      In the electric age, we wear all mankind as our skin. Our mosaics are the patterns 
+      that help us feel the texture of that collective consciousness.
+    </p>
+  </div>
+
+  <div class="about-section">
+    <h2>Core Principles</h2>
+    
+    <div class="principles-grid">
+      <div class="principle-card">
+        <h3>🐌 Slow Social</h3>
+        <p>One letter per day. Quality over quantity. Depth over speed.</p>
+      </div>
+      
+      <div class="principle-card">
+        <h3>🔲 Pattern Recognition</h3>
+        <p>Mosaics reveal meanings that linear reading cannot capture.</p>
+      </div>
+      
+      <div class="principle-card">
+        <h3>💭 Cool Medium</h3>
+        <p>High participation required. You complete the message.</p>
+      </div>
+      
+      <div class="principle-card">
+        <h3>🌊 Acoustic Space</h3>
+        <p>All-at-once awareness rather than point-by-point analysis.</p>
+      </div>
+      
+      <div class="principle-card">
+        <h3>✨ Resonance</h3>
+        <p>No public metrics. True connection happens in the margins.</p>
+      </div>
+      
+      <div class="principle-card">
+        <h3>🌐 Global Village</h3>
+        <p>Local thoughts in a planetary conversation.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="about-section">
+    <h2>The Medium's Massage</h2>
+    <p>
+      Slocial massages your mind into new patterns. The enforced slowness, the mosaic organization, 
+      the absence of algorithmic curation — these aren't features of the platform, they <em>are</em> the platform. 
+      The constraints are the content.
+    </p>
+    
+    <div class="quote-block">
+      "The medium is the message. This is merely to say that the personal and social consequences 
+      of any medium result from the new scale that is introduced into our affairs."
+      <cite>— Marshall McLuhan, Understanding Media</cite>
+    </div>
+    
+    <p>
+      Here, we're scaling down to scale up. Slowing down to speed up understanding. 
+      Fragmenting to achieve wholeness. This is our paradox and our promise.
+    </p>
+  </div>
+
+  <div class="about-section">
+    <h2>Join the Mosaic</h2>
+    <p>
+      Slocial is a living experiment in what happens when we design technology that respects 
+      the ecology of mind. When we treat words not as content to be consumed but as 
+      environment to be inhabited.
+    </p>
+    
+    <p>
+      Welcome to our web sight. Adjust your vision. The patterns are already emerging.
+    </p>
+  </div>
+</div>
