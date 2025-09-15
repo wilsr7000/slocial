@@ -123,9 +123,9 @@
   <a href="/" class="back-to-all">← Back to All</a>
   
   <div class="mosaic-header-content">
-    <div class="mosaic-image">
+    <div class="mosaic-image" data-mosaic-initial="<%= mosaic.name.charAt(0).toUpperCase() %>">
       <% if (mosaic.image_url) { %>
-        <img src="<%= mosaic.image_url %>" alt="<%= mosaic.name %>" onerror="this.style.display='none'; this.parentElement.innerHTML='<%= mosaic.name.charAt(0).toUpperCase() %>'">
+        <img src="<%= mosaic.image_url %>" alt="<%= mosaic.name %>" onerror="handleMosaicImageError(this)">
       <% } else { %>
         <%= mosaic.name.charAt(0).toUpperCase() %>
       <% } %>
@@ -367,6 +367,14 @@ let isLoading = false;
 let hasMoreLetters = <%= totalCount > letters.length %>;
 const isLoggedIn = <%= !!user %>;
 const mosaicSlug = '<%= mosaic.slug %>';
+
+// Handle mosaic image loading errors
+function handleMosaicImageError(img) {
+  const container = img.parentElement;
+  const initial = container.getAttribute('data-mosaic-initial');
+  img.style.display = 'none';
+  container.textContent = initial || '?';
+}
 
 // Auto-link URLs in text
 function autoLink(text) {

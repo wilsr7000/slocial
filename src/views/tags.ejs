@@ -389,9 +389,9 @@
     <% tags.forEach((tag, index) => { %>
       <div class="tag-card" style="--tag-index: <%= index %>;">
         <!-- Image Section -->
-        <div class="tag-image-container">
+        <div class="tag-image-container" data-tag-initial="<%= tag.name.charAt(0).toUpperCase() %>">
           <% if (tag.image_url) { %>
-            <img src="<%= tag.image_url %>" alt="<%= tag.name %>" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=&quot;tag-image-placeholder&quot;><%= tag.name.charAt(0).toUpperCase() %></div>'" />
+            <img src="<%= tag.image_url %>" alt="<%= tag.name %>" onerror="handleImageError(this)" />
           <% } else { %>
             <div class="tag-image-placeholder">
               <%= tag.name.charAt(0).toUpperCase() %>
@@ -556,6 +556,21 @@
       }
     });
   });
+  
+  // Handle image loading errors
+  function handleImageError(img) {
+    const container = img.parentElement;
+    const initial = container.getAttribute('data-tag-initial');
+    img.style.display = 'none';
+    
+    // Create placeholder element
+    const placeholder = document.createElement('div');
+    placeholder.className = 'tag-image-placeholder';
+    placeholder.textContent = initial || '?';
+    
+    // Replace the image with the placeholder
+    container.appendChild(placeholder);
+  }
 </script>
 
 <!-- Create Mosaic Modal -->

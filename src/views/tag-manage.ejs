@@ -452,7 +452,8 @@
           <% if (tag.image_url) { %>
             <div class="current-image" style="margin-bottom: 1rem;">
               <p style="margin-bottom: 0.5rem; color: var(--muted, #666);">Current image:</p>
-              <img src="<%= tag.image_url %>" alt="Current tag image" style="max-width: 200px; max-height: 200px; border-radius: 8px; display: block; margin-bottom: 0.5rem;" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend', '<div style=\'padding: 20px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; color: var(--muted);\'>Image could not be loaded</div>')">
+              <img id="editModalImage" src="<%= tag.image_url %>" alt="Current tag image" style="max-width: 200px; max-height: 200px; border-radius: 8px; display: block; margin-bottom: 0.5rem;" onerror="handleEditImageError(this)">
+              <div id="editImageError" style="display: none; padding: 20px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; color: var(--muted); margin-bottom: 0.5rem;">Image could not be loaded</div>
               <label style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                 <input type="checkbox" name="remove_image" value="true">
                 <span style="color: #dc3545;">Remove current image</span>
@@ -944,6 +945,15 @@
   function clearEditUrlInput() {
     document.getElementById('editImageUrl').value = '';
     document.getElementById('editUrlImagePreview').innerHTML = '';
+  }
+  
+  // Handle edit modal image error
+  function handleEditImageError(img) {
+    img.style.display = 'none';
+    const errorDiv = document.getElementById('editImageError');
+    if (errorDiv) {
+      errorDiv.style.display = 'block';
+    }
   }
 </script>
 <% } %>
