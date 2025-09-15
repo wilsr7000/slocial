@@ -10,8 +10,6 @@ const passport = require('passport');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 const window = new JSDOM('').window;
 const DOMPurify = createDOMPurify(window);
@@ -24,56 +22,11 @@ marked.setOptions({
   mangle: false
 });
 
-// Configure Cloudinary (only if credentials are provided)
-let tagImageStorage;
-
-if (process.env.CLOUDINARY_CLOUD_NAME && 
-    process.env.CLOUDINARY_API_KEY && 
-    process.env.CLOUDINARY_API_SECRET) {
-  
-  // Configure Cloudinary
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-  });
-
-  // Use Cloudinary storage
-  tagImageStorage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-      folder: 'slocial/tags',
-      allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
-      transformation: [{ width: 800, height: 800, crop: 'limit' }],
-      // Generate unique public_id
-      public_id: (req, file) => 'tag-' + Date.now() + '-' + Math.round(Math.random() * 1E9)
-    }
-  });
-} else {
-  // Fallback to local storage (for development)
-  console.log('Cloudinary not configured. Using local storage for images.');
-  tagImageStorage = multer.diskStorage({
-    destination: function (req, file, cb) {
-      const uploadPath = path.join(__dirname, 'public', 'uploads', 'tags');
-      // Ensure directory exists
-      if (!fs.existsSync(uploadPath)) {
-        fs.mkdirSync(uploadPath, { recursive: true });
-      }
-      cb(null, uploadPath);
-    },
-    filename: function (req, file, cb) {
-      // Generate unique filename with timestamp and random string
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      const ext = path.extname(file.originalname);
-      cb(null, 'tag-' + uniqueSuffix + ext);
-    }
-  });
-}
-
+// Configure multer for memory storage (to store images as blobs in database)
 const tagImageUpload = multer({ 
-  storage: tagImageStorage,
+  storage: multer.memoryStorage(), // Store files in memory as Buffer objects
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 2 * 1024 * 1024 // 2MB limit (to keep database size reasonable)
   },
   fileFilter: function (req, file, cb) {
     // Accept only image files
@@ -1447,17 +1400,15 @@ function buildRouter(db) {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
     
-    // Determine the image URL (uploaded file takes priority over URL input)
+    // Handle image data
+    let imageData = null;
     let finalImageUrl = null;
+    
     if (req.file) {
-      // If file was uploaded
-      if (req.file.path) {
-        // Cloudinary storage provides the URL in path
-        finalImageUrl = req.file.path;
-      } else {
-        // Local storage uses filename
-        finalImageUrl = '/static/uploads/tags/' + req.file.filename;
-      }
+      // If file was uploaded, store it as a blob
+      imageData = req.file.buffer;
+      // Set a special URL that will be served from database
+      finalImageUrl = `/api/tags/${slug}/image`;
     } else if (image_url) {
       // Otherwise use the provided URL if any
       finalImageUrl = image_url;
@@ -1474,17 +1425,13 @@ function buildRouter(db) {
       
       if (existing) {
         db.prepare('ROLLBACK').run();
-        // Delete uploaded file if it exists
-        if (req.file) {
-          fs.unlinkSync(req.file.path);
-        }
         return res.redirect('/tags?error=' + encodeURIComponent('A tag with this name already exists'));
       }
       
       // Create the tag
       const result = db.prepare(`
-        INSERT INTO tags (name, slug, description, short_description, long_description, image_url, created_by, is_public, auto_approve)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO tags (name, slug, description, short_description, long_description, image_url, image_data, created_by, is_public, auto_approve)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         name,
         slug,
@@ -1492,6 +1439,7 @@ function buildRouter(db) {
         short_description,
         long_description || null,
         finalImageUrl,
+        imageData,
         userId,
         is_public ? 1 : 0,
         auto_approve ? 1 : 0
@@ -1636,6 +1584,49 @@ function buildRouter(db) {
     } catch (error) {
       console.error('Error fetching available tags:', error);
       res.status(500).json({ error: 'Failed to fetch tags' });
+    }
+  });
+  
+  // Serve tag images from database
+  router.get('/api/tags/:slug/image', (req, res) => {
+    const { slug } = req.params;
+    
+    try {
+      // Get image data from database
+      const tag = db.prepare(`
+        SELECT image_data 
+        FROM tags 
+        WHERE slug = ? AND image_data IS NOT NULL
+      `).get(slug);
+      
+      if (!tag || !tag.image_data) {
+        return res.status(404).send('Image not found');
+      }
+      
+      // Detect image type from blob data
+      const buffer = Buffer.from(tag.image_data);
+      let contentType = 'image/jpeg'; // Default
+      
+      // Check magic bytes to determine image type
+      if (buffer[0] === 0x89 && buffer[1] === 0x50) {
+        contentType = 'image/png';
+      } else if (buffer[0] === 0x47 && buffer[1] === 0x49) {
+        contentType = 'image/gif';
+      } else if (buffer[0] === 0x52 && buffer[1] === 0x49) {
+        contentType = 'image/webp';
+      }
+      
+      // Set caching headers for better performance
+      res.set({
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+        'Content-Length': buffer.length
+      });
+      
+      res.send(buffer);
+    } catch (error) {
+      console.error('Error serving tag image:', error);
+      res.status(500).send('Error serving image');
     }
   });
   
@@ -1949,99 +1940,88 @@ function buildRouter(db) {
       `).get(name, tagId);
       
       if (existing) {
-        // Delete uploaded file if it exists
-        if (req.file) {
-          fs.unlinkSync(req.file.path);
-        }
         return res.redirect(`/tags/${tagId}/manage?error=` + encodeURIComponent('A tag with this name already exists'));
       }
       
       // Get current tag to check for existing image
-      const currentTag = db.prepare('SELECT image_url FROM tags WHERE id = ?').get(tagId);
+      const currentTag = db.prepare('SELECT image_url, slug FROM tags WHERE id = ?').get(tagId);
       let finalImageUrl = currentTag.image_url;
+      let imageData = null;
       
       // Handle image updates
       if (remove_image === 'true') {
         // User wants to remove the image
         finalImageUrl = null;
-        // Delete old local image if it exists
-        if (currentTag.image_url && currentTag.image_url.startsWith('/static/uploads/')) {
-          const oldImagePath = path.join(__dirname, 'public', currentTag.image_url.replace('/static/', ''));
-          try {
-            fs.unlinkSync(oldImagePath);
-          } catch (e) {
-            console.error('Failed to delete old image:', e);
-          }
-        }
+        imageData = null; // This will clear the blob
       } else if (req.file) {
-        // New file uploaded
-        if (req.file.path) {
-          // Cloudinary storage provides the URL in path
-          finalImageUrl = req.file.path;
-        } else {
-          // Local storage uses filename
-          finalImageUrl = '/static/uploads/tags/' + req.file.filename;
-          // Delete old local image if it exists
-          if (currentTag.image_url && currentTag.image_url.startsWith('/static/uploads/')) {
-            const oldImagePath = path.join(__dirname, 'public', currentTag.image_url.replace('/static/', ''));
-            try {
-              fs.unlinkSync(oldImagePath);
-            } catch (e) {
-              console.error('Failed to delete old image:', e);
-            }
-          }
-        }
+        // New file uploaded - store as blob
+        imageData = req.file.buffer;
+        finalImageUrl = `/api/tags/${slug}/image`;
       } else if (image_url && image_url !== currentTag.image_url) {
         // New URL provided
         finalImageUrl = image_url;
-        // Delete old local image if switching from uploaded to URL
-        if (currentTag.image_url && currentTag.image_url.startsWith('/static/uploads/')) {
-          const oldImagePath = path.join(__dirname, 'public', currentTag.image_url.replace('/static/', ''));
-          try {
-            fs.unlinkSync(oldImagePath);
-          } catch (e) {
-            console.error('Failed to delete old image:', e);
-          }
-        }
+        imageData = null; // Clear any existing blob when using URL
       }
       
       // Update the tag
-      db.prepare(`
-        UPDATE tags SET 
-          name = ?,
-          slug = ?,
-          description = ?,
-          short_description = ?,
-          long_description = ?,
-          image_url = ?,
-          is_public = ?,
-          auto_approve = ?,
-          updated_at = datetime('now')
-        WHERE id = ?
-      `).run(
-        name,
-        slug,
-        short_description, // Use short_description for the main description field
-        short_description,
-        long_description || null,
-        finalImageUrl,
-        is_public ? 1 : 0,
-        auto_approve ? 1 : 0,
-        tagId
-      );
+      if (imageData !== null || remove_image === 'true' || req.file) {
+        // Update including image_data when we have changes to the image
+        db.prepare(`
+          UPDATE tags SET 
+            name = ?,
+            slug = ?,
+            description = ?,
+            short_description = ?,
+            long_description = ?,
+            image_url = ?,
+            image_data = ?,
+            is_public = ?,
+            auto_approve = ?,
+            updated_at = datetime('now')
+          WHERE id = ?
+        `).run(
+          name,
+          slug,
+          short_description, // Use short_description for the main description field
+          short_description,
+          long_description || null,
+          finalImageUrl,
+          imageData,
+          is_public ? 1 : 0,
+          auto_approve ? 1 : 0,
+          tagId
+        );
+      } else {
+        // Update without touching image_data if no image changes
+        db.prepare(`
+          UPDATE tags SET 
+            name = ?,
+            slug = ?,
+            description = ?,
+            short_description = ?,
+            long_description = ?,
+            image_url = ?,
+            is_public = ?,
+            auto_approve = ?,
+            updated_at = datetime('now')
+          WHERE id = ?
+        `).run(
+          name,
+          slug,
+          short_description, // Use short_description for the main description field
+          short_description,
+          long_description || null,
+          finalImageUrl,
+          is_public ? 1 : 0,
+          auto_approve ? 1 : 0,
+          tagId
+        );
+      }
       
       res.redirect(`/tags/${tagId}/manage?message=` + encodeURIComponent('Tag updated successfully!'));
       
     } catch (error) {
       console.error('Error updating tag:', error);
-      // Delete uploaded file if it exists
-      if (req.file) {
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch (e) {
-          console.error('Failed to delete uploaded file:', e);
-        }
-      }
       res.redirect(`/tags/${tagId}/manage?error=` + encodeURIComponent('Failed to update tag'));
     }
   });

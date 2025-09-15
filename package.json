@@ -7,7 +7,7 @@
     "dev": "nodemon src/server.js",
     "start": "npm run migrate && node src/server.js",
     "start:prod": "node src/server.js",
-    "migrate": "node src/db/migrate-admin.js && node src/db/migrate-profile.js && node src/db/migrate-events.js && node src/db/migrate-oauth.js && node src/db/migrate-reading-status.js && node src/db/migrate-drafts.js && node src/db/migrate-tag-columns.js && node src/db/migrate-reading-log.js",
+    "migrate": "node src/db/migrate-admin.js && node src/db/migrate-profile.js && node src/db/migrate-events.js && node src/db/migrate-oauth.js && node src/db/migrate-reading-status.js && node src/db/migrate-drafts.js && node src/db/migrate-tag-columns.js && node src/db/migrate-reading-log.js && node src/db/migrate-image-blob.js",
     "setup-admin": "node src/db/setup-admin.js"
   },
   "keywords": [],
@@ -17,7 +17,6 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.2.0",
-    "cloudinary": "^1.41.3",
     "connect-sqlite3": "^0.9.16",
     "cookie-parser": "^1.4.7",
     "csurf": "^1.11.0",
@@ -35,7 +34,6 @@
     "marked": "^16.2.1",
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
-    "multer-storage-cloudinary": "^4.0.0",
     "passport": "^0.7.0",
     "passport-apple": "^2.0.2",
     "passport-google-oauth20": "^2.0.0"
