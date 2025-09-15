@@ -635,10 +635,27 @@ function buildRouter(db) {
 
   function renderMarkdown(text) {
     const html = marked.parse(text);
-    // Allow data URLs for embedded images
+    // Allow images with both regular URLs and data URLs
     return DOMPurify.sanitize(html, {
-      ADD_DATA_URI_TAGS: ['img'],
-      ADD_ATTR: ['target']
+      ADD_DATA_URI_TAGS: ['img'],  // Allow data URLs for images
+      ADD_ATTR: ['target'],         // Allow target attribute for links
+      ALLOWED_TAGS: [               // Explicitly allow common HTML tags
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'p', 'br', 'hr',
+        'ul', 'ol', 'li',
+        'a', 'img',
+        'strong', 'em', 'b', 'i', 'u',
+        'code', 'pre',
+        'blockquote',
+        'table', 'thead', 'tbody', 'tr', 'th', 'td',
+        'span', 'div'
+      ],
+      ALLOWED_ATTR: [               // Explicitly allow common attributes
+        'href', 'src', 'alt', 'title', 'target',
+        'width', 'height',
+        'class', 'id',
+        'rel'
+      ]
     });
   }
 

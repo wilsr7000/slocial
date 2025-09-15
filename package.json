@@ -10,6 +10,15 @@
     "test:letters": "jest tests/letters.test.js",
     "test:tags": "jest tests/tags.test.js",
     "test:verbose": "SHOW_TEST_LOGS=true jest --verbose",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:headed": "playwright test --headed",
+    "e2e:debug": "playwright test --debug",
+    "e2e:chrome": "playwright test --project=chromium",
+    "e2e:mobile": "playwright test e2e/mobile.spec.js",
+    "e2e:report": "playwright show-report",
+    "e2e:production": "E2E_BASE_URL=https://slocial.onrender.com playwright test",
+    "test:all": "npm test && npm run e2e",
     "dev": "nodemon src/server.js",
     "start": "npm run migrate && node src/server.js",
     "start:prod": "node src/server.js",
@@ -45,9 +54,11 @@
     "passport-google-oauth20": "^2.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@types/jest": "^30.0.0",
     "jest": "^29.7.0",
     "nodemon": "^3.1.10",
+    "playwright": "^1.55.0",
     "supertest": "^7.1.4"
   },
   "engines": {

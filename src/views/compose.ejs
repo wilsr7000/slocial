@@ -1240,6 +1240,7 @@
   }
   
   function publish() {
+    console.log('publish() called');
     // Make sure tags are updated before submitting
     updateTagsHiddenInput();
     const publishBtn = document.getElementById('publish-btn');
@@ -1247,7 +1248,9 @@
       console.error('Publish button not found!');
       return;
     }
+    console.log('Clicking publish button...');
     publishBtn.click();
+    console.log('Publish button clicked');
   }
   
   // Auto-save functionality
@@ -1521,6 +1524,11 @@
   
   // Ensure tags are properly set before form submission
   document.getElementById('compose-form').addEventListener('submit', (e) => {
+    console.log('Form submit event triggered');
+    console.log('Title:', titleInput.value);
+    console.log('Body length:', bodyInput.value.length);
+    console.log('Tags:', tagsHiddenInput.value);
+    
     // Update the hidden tags input with the current selected tags
     updateTagsHiddenInput();
     
@@ -1532,6 +1540,7 @@
     }
     bodyInput.value = finalBody;
     
+    console.log('Form submitting...');
     // Form will submit normally
     return true;
   });
