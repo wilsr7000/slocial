@@ -704,7 +704,8 @@ function buildRouter(db) {
       letters, 
       page, 
       pageClass: 'home',
-      filterTag: filterTagData
+      filterTag: filterTagData,
+      pageTitle: 'Slocial - Read'
     });
   });
 
@@ -875,7 +876,8 @@ function buildRouter(db) {
     errors: [], 
     values: {}, 
     pageClass: 'auth',
-    theme: req.cookies?.theme || 'light'
+    theme: req.cookies?.theme || 'light',
+    pageTitle: 'Slocial - Sign Up'
   }));
   router.post('/signup',
     body('handle').isLength({ min: 3, max: 20 }).isAlphanumeric().withMessage('Handle must be alphanumeric 3-20'),
@@ -938,7 +940,8 @@ function buildRouter(db) {
     errors: [], 
     values: {}, 
     pageClass: 'auth',
-    theme: req.cookies?.theme || 'light'
+    theme: req.cookies?.theme || 'light',
+    pageTitle: 'Slocial - Sign In'
   }));
   router.post('/login',
     body('email').isEmail(),
@@ -1049,7 +1052,7 @@ function buildRouter(db) {
   // Profile routes
   router.get('/profile', requireAuth, (req, res) => {
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.session.user.id);
-    res.render('profile', { user: req.session.user, profile: user, errors: [], isAuthor: user.is_slocialite === 0 });
+    res.render('profile', { user: req.session.user, profile: user, errors: [], isAuthor: user.is_slocialite === 0, pageTitle: 'Slocial - Profile' });
   });
 
   router.post('/profile', requireAuth,
@@ -1076,7 +1079,8 @@ function buildRouter(db) {
       errors: [], 
       values: {}, 
       pageClass: 'compose',
-      theme: req.cookies?.theme || 'light'
+      theme: req.cookies?.theme || 'light',
+      pageTitle: 'Slocial - Compose'
     });
   });
   
@@ -1095,7 +1099,8 @@ function buildRouter(db) {
     res.render('drafts', { 
       user: req.session.user, 
       drafts, 
-      saved: !!saved 
+      saved: !!saved,
+      pageTitle: 'Slocial - Drafts' 
     });
   });
   
@@ -1220,7 +1225,8 @@ function buildRouter(db) {
       tags,
       message: req.query.message,
       error: req.query.error,
-      csrfToken: req.csrfToken()
+      csrfToken: req.csrfToken(),
+      pageTitle: 'Slocial - Explore Tags'
     });
   });
   
