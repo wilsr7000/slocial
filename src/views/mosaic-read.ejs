@@ -1,0 +1,560 @@
+<style>
+  .mosaic-header {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+  }
+  
+  .mosaic-header-content {
+    display: flex;
+    gap: 2rem;
+    align-items: start;
+  }
+  
+  .mosaic-image {
+    width: 120px;
+    height: 120px;
+    border-radius: 12px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--hover-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    border: 1px solid var(--border);
+  }
+  
+  .mosaic-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .mosaic-info {
+    flex: 1;
+  }
+  
+  .mosaic-title {
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: var(--fg);
+  }
+  
+  .mosaic-description {
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+  
+  .mosaic-stats {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+  
+  .mosaic-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .mosaic-stat-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--fg);
+  }
+  
+  .mosaic-stat-label {
+    font-size: 0.875rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .mosaic-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+  
+  .back-to-all {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.5rem 1rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--fg);
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+  }
+  
+  .back-to-all:hover {
+    background: var(--hover-bg);
+  }
+  
+  @media (max-width: 768px) {
+    .mosaic-header-content {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    
+    .mosaic-stats {
+      justify-content: center;
+    }
+    
+    .back-to-all {
+      position: static;
+      margin-top: 1rem;
+    }
+  }
+</style>
+
+<section class="mosaic-header">
+  <a href="/" class="back-to-all">← Back to All</a>
+  
+  <div class="mosaic-header-content">
+    <div class="mosaic-image">
+      <% if (mosaic.image_url) { %>
+        <img src="<%= mosaic.image_url %>" alt="<%= mosaic.name %>" onerror="this.style.display='none'; this.parentElement.innerHTML='<%= mosaic.name.charAt(0).toUpperCase() %>'">
+      <% } else { %>
+        <%= mosaic.name.charAt(0).toUpperCase() %>
+      <% } %>
+    </div>
+    
+    <div class="mosaic-info">
+      <h1 class="mosaic-title">#<%= mosaic.name %></h1>
+      
+      <% if (mosaic.long_description) { %>
+        <p class="mosaic-description"><%= mosaic.long_description %></p>
+      <% } else if (mosaic.short_description) { %>
+        <p class="mosaic-description"><%= mosaic.short_description %></p>
+      <% } else if (mosaic.description) { %>
+        <p class="mosaic-description"><%= mosaic.description %></p>
+      <% } else { %>
+        <p class="mosaic-description">A curated mosaic of letters exploring <%= mosaic.name.toLowerCase() %>.</p>
+      <% } %>
+      
+      <div class="mosaic-stats">
+        <div class="mosaic-stat">
+          <span class="mosaic-stat-value"><%= totalCount %></span>
+          <span class="mosaic-stat-label">Total Letters</span>
+        </div>
+        
+        <% if (user) { %>
+          <div class="mosaic-stat">
+            <span class="mosaic-stat-value"><%= unreadCount %></span>
+            <span class="mosaic-stat-label">Unread</span>
+          </div>
+        <% } %>
+        
+        <% if (mosaic.auto_approve) { %>
+          <div class="mosaic-stat">
+            <span class="mosaic-stat-value" style="color: var(--primary-color);">✓</span>
+            <span class="mosaic-stat-label">Instant Access</span>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="feed">
+  <h2 class="section-title">Letters in this Mosaic</h2>
+  
+  <% if (letters.length === 0) { %>
+    <div class="empty">
+      <p>No letters in this mosaic yet.</p>
+      <p style="margin-top: 1rem; color: var(--muted);">
+        This mosaic is waiting for its first letters. Check back soon!
+      </p>
+      <a href="/" class="btn btn-primary" style="margin-top: 1rem;">
+        View All Letters
+      </a>
+    </div>
+  <% } %>
+  
+  <% letters.forEach(letter => { %>
+    <article class="letter <%= letter.reading_status === 'later' ? 'letter-collapsed' : '' %>" data-letter-id="<%= letter.id %>">
+      <% if (letter.reading_status === 'later') { %>
+        <!-- Collapsed view for saved letters -->
+        <div class="letter-saved-header">
+          <div class="saved-indicator">
+            <span class="hourglass-icon">⏳</span>
+            <span class="saved-label">Saved for later</span>
+          </div>
+          <h3 class="saved-title">
+            <a href="/letters/<%= letter.id %>"><%= letter.title %></a>
+          </h3>
+          <div class="saved-meta">
+            <span class="author-name">@<%= letter.handle %></span>
+            <span class="separator">•</span>
+            <span class="date"><%= new Date(letter.publish_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></span>
+            <% if (letter.tags && letter.tags.length > 0) { %>
+              <span class="separator">•</span>
+              <% letter.tags.forEach((tag, index) => { %>
+                <a href="/mosaics/<%= tag.slug %>/read" class="letter-tag" style="font-size: 0.85em;">
+                  #<%= tag.name %>
+                </a>
+                <% if (index < letter.tags.length - 1) { %>
+                  <span style="color: var(--muted); margin: 0 0.25rem;">·</span>
+                <% } %>
+              <% }) %>
+            <% } %>
+            <button class="expand-btn" onclick="toggleLetterExpand(<%= letter.id %>)">
+              <span class="expand-icon">▼</span> Expand
+            </button>
+          </div>
+        </div>
+        
+        <!-- Hidden full content (can be expanded) -->
+        <div class="letter-full-content" style="display: none;">
+          <p><%- autoLink(letter.body.slice(0, 260)) %><% if (letter.body.length > 260) { %>…<% } %></p>
+          
+          <!-- Author section -->
+          <div class="feed-author">
+      <% } else { %>
+        <!-- Normal view for other letters -->
+        <h2>
+          <a href="/letters/<%= letter.id %>"><%= letter.title %></a>
+          <% if (letter.format && letter.format !== 'standard') { %>
+            <span class="format-badge format-<%= letter.format %>"><%= letter.format %></span>
+          <% } %>
+        </h2>
+        <div class="meta">
+          <%= new Date(letter.publish_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %>
+          <% if (letter.tags && letter.tags.length > 0) { %>
+            <span class="letter-tags">
+              <% letter.tags.forEach((tag, index) => { %>
+                <a href="/mosaics/<%= tag.slug %>/read" class="letter-tag">
+                  #<%= tag.name %>
+                </a>
+                <% if (index < letter.tags.length - 1) { %>
+                  <span style="color: var(--muted); margin: 0 0.25rem;">·</span>
+                <% } %>
+              <% }) %>
+            </span>
+          <% } %>
+        </div>
+        <p><%- autoLink(letter.body.slice(0, 260)) %><% if (letter.body.length > 260) { %>…<% } %></p>
+        
+        <!-- Author section -->
+        <div class="feed-author">
+      <% } %>
+        <div class="feed-author-avatar <%= letter.is_slocialite === 0 ? 'author-avatar' : '' %>">
+          <% if (letter.avatar_url) { %>
+            <img src="<%= letter.avatar_url %>" alt="<%= letter.handle %>" onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\"font-size:16px\">👤</span>';">
+          <% } else { %>
+            <span style="font-size: 16px;">👤</span>
+          <% } %>
+        </div>
+        <div class="feed-author-info">
+          <div class="feed-author-name">
+            @<%= letter.handle %>
+            <% if (letter.is_slocialite === 0) { %>
+              <span class="author-badge" title="Verified Author">✨</span>
+            <% } %>
+          </div>
+          <% if (letter.bio) { %>
+            <div class="feed-author-bio"><%= letter.bio.slice(0, 100) %><% if (letter.bio.length > 100) { %>…<% } %></div>
+          <% } %>
+        </div>
+      </div>
+      <% if (letter.reading_status === 'later') { %>
+        </div>
+      <% } %>
+      
+      <div class="actions <%= letter.reading_status === 'later' ? 'saved-actions' : '' %>">
+        <% if (user) { %>
+          <div class="reading-actions">
+            <% if (letter.reading_status === 'read') { %>
+              <button class="reading-btn read completed" disabled>
+                <span class="icon">✓</span> Read
+              </button>
+            <% } else if (letter.reading_status === 'skip') { %>
+              <button class="reading-btn skip completed" disabled>
+                <span class="icon">→</span> Skipped
+              </button>
+            <% } else if (letter.reading_status === 'later') { %>
+              <button class="reading-btn later active" onclick="updateReadingStatus(<%= letter.id %>, 'remove')">
+                <span class="icon">🔖</span> Saved
+              </button>
+            <% } else { %>
+              <button class="reading-btn read" onclick="window.location.href='/letters/<%= letter.id %>'">
+                <span class="icon">📖</span> Read
+              </button>
+              <button class="reading-btn skip" onclick="updateReadingStatus(<%= letter.id %>, 'skip')">
+                <span class="icon">→</span> Skip
+              </button>
+              <button class="reading-btn later" onclick="updateReadingStatus(<%= letter.id %>, 'later')">
+                <span class="icon">🔖</span> Later
+              </button>
+            <% } %>
+          </div>
+          
+          <div class="resonate-action">
+            <% if (letter.did_resonate) { %>
+              <form action="/letters/<%= letter.id %>/unresonate" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>" /><button class="btn resonate-btn active">Resonated</button></form>
+            <% } else { %>
+              <form action="/letters/<%= letter.id %>/resonate" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>" /><button class="btn resonate-btn">Resonate</button></form>
+            <% } %>
+          </div>
+        <% } %>
+      </div>
+    </article>
+  <% }) %>
+  
+  <!-- Loading indicator -->
+  <div id="loading-indicator" style="display: none; text-align: center; padding: 40px;">
+    <div class="loading-spinner"></div>
+    <p style="color: var(--muted); margin-top: 16px;">Loading more letters...</p>
+  </div>
+  
+  <!-- End of feed indicator -->
+  <div id="end-of-feed" style="display: none; text-align: center; padding: 40px;">
+    <p style="color: var(--muted); font-style: italic;">✨ You've reached the end of this mosaic.</p>
+  </div>
+</section>
+
+<style>
+.loading-spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid var(--fg);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.letter-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: 1rem;
+}
+
+.letter-tag {
+  color: var(--muted);
+  font-size: 0.9em;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.letter-tag:hover {
+  color: var(--fg);
+}
+</style>
+
+<script>
+// Copy all the JavaScript from index.ejs for reading status updates
+let currentPage = <%= page %>;
+let isLoading = false;
+let hasMoreLetters = <%= totalCount > letters.length %>;
+const isLoggedIn = <%= !!user %>;
+const mosaicSlug = '<%= mosaic.slug %>';
+
+// Auto-link URLs in text
+function autoLink(text) {
+  const urlRegex = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/g;
+  return text.replace(urlRegex, function(url) {
+    return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + url + '</a>';
+  });
+}
+
+// Track reading time for each letter
+const letterReadingTimes = {};
+const letterStartTimes = {};
+
+// Start tracking reading time when a letter comes into view
+function startReadingTimer(letterId) {
+  if (!letterStartTimes[letterId]) {
+    letterStartTimes[letterId] = Date.now();
+  }
+}
+
+// Stop tracking and return reading time in seconds
+function stopReadingTimer(letterId) {
+  if (letterStartTimes[letterId]) {
+    const readingTime = Math.round((Date.now() - letterStartTimes[letterId]) / 1000);
+    delete letterStartTimes[letterId];
+    return readingTime;
+  }
+  return 0;
+}
+
+// Intersection Observer to track when letters are visible
+if (isLoggedIn && 'IntersectionObserver' in window) {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const letterId = entry.target.getAttribute('data-letter-id');
+      if (entry.isIntersecting) {
+        startReadingTimer(letterId);
+      } else {
+        const readingTime = stopReadingTimer(letterId);
+        if (readingTime > 0) {
+          letterReadingTimes[letterId] = (letterReadingTimes[letterId] || 0) + readingTime;
+        }
+      }
+    });
+  }, { threshold: 0.5 });
+  
+  // Observe all letter articles
+  document.querySelectorAll('.letter').forEach(letter => {
+    observer.observe(letter);
+  });
+}
+
+// Update reading status with reading time
+async function updateReadingStatus(letterId, status) {
+  if (!isLoggedIn) return;
+  
+  // Get total reading time for this letter
+  const currentReadingTime = stopReadingTimer(letterId);
+  const totalReadingTime = (letterReadingTimes[letterId] || 0) + currentReadingTime;
+  
+  try {
+    const response = await fetch(`/letters/${letterId}/status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': '<%= typeof csrfToken !== "undefined" ? csrfToken : "" %>'
+      },
+      body: JSON.stringify({ 
+        status,
+        readingTime: totalReadingTime,
+        referrerType: 'mosaic',
+        referrer: mosaicSlug
+      })
+    });
+    
+    if (response.ok) {
+      const letterElement = document.querySelector(`[data-letter-id="${letterId}"]`);
+      if (letterElement) {
+        updateLetterUI(letterElement, status);
+      }
+    }
+  } catch (error) {
+    console.error('Error updating reading status:', error);
+  }
+}
+
+function updateLetterUI(letterElement, status) {
+  const actionsDiv = letterElement.querySelector('.reading-actions');
+  if (!actionsDiv) return;
+  
+  if (status === 'later') {
+    letterElement.classList.add('letter-collapsed');
+    // Update UI for saved state
+  } else if (status === 'skip') {
+    actionsDiv.innerHTML = `
+      <button class="reading-btn skip completed" disabled>
+        <span class="icon">→</span> Skipped
+      </button>
+    `;
+  } else if (status === 'remove') {
+    letterElement.classList.remove('letter-collapsed');
+    actionsDiv.innerHTML = `
+      <button class="reading-btn read" onclick="window.location.href='/letters/${letterId}'">
+        <span class="icon">📖</span> Read
+      </button>
+      <button class="reading-btn skip" onclick="updateReadingStatus(${letterId}, 'skip')">
+        <span class="icon">→</span> Skip
+      </button>
+      <button class="reading-btn later" onclick="updateReadingStatus(${letterId}, 'later')">
+        <span class="icon">🔖</span> Later
+      </button>
+    `;
+  }
+}
+
+function toggleLetterExpand(letterId) {
+  const letterElement = document.querySelector(`[data-letter-id="${letterId}"]`);
+  if (!letterElement) return;
+  
+  const fullContent = letterElement.querySelector('.letter-full-content');
+  const expandBtn = letterElement.querySelector('.expand-btn');
+  const expandIcon = expandBtn.querySelector('.expand-icon');
+  
+  if (fullContent.style.display === 'none') {
+    fullContent.style.display = 'block';
+    expandIcon.textContent = '▲';
+    expandBtn.innerHTML = '<span class="expand-icon">▲</span> Collapse';
+  } else {
+    fullContent.style.display = 'none';
+    expandIcon.textContent = '▼';
+    expandBtn.innerHTML = '<span class="expand-icon">▼</span> Expand';
+  }
+}
+
+// Infinite scroll for mosaic page
+async function loadMoreLetters() {
+  if (isLoading || !hasMoreLetters) return;
+  
+  isLoading = true;
+  document.getElementById('loading-indicator').style.display = 'block';
+  
+  try {
+    const response = await fetch(`/mosaics/${mosaicSlug}/api/letters?page=${currentPage + 1}`);
+    const data = await response.json();
+    
+    if (data.letters && data.letters.length > 0) {
+      const feedContainer = document.querySelector('.feed');
+      const loadingIndicator = document.getElementById('loading-indicator');
+      
+      data.letters.forEach(letter => {
+        const letterHTML = createLetterHTML(letter);
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = letterHTML;
+        feedContainer.insertBefore(tempDiv.firstElementChild, loadingIndicator);
+      });
+      
+      currentPage++;
+      hasMoreLetters = data.hasMore;
+      
+      if (!hasMoreLetters) {
+        document.getElementById('end-of-feed').style.display = 'block';
+      }
+    } else {
+      hasMoreLetters = false;
+      document.getElementById('end-of-feed').style.display = 'block';
+    }
+  } catch (error) {
+    console.error('Error loading more letters:', error);
+  } finally {
+    isLoading = false;
+    document.getElementById('loading-indicator').style.display = 'none';
+  }
+}
+
+// Check if we should load more content
+function checkScroll() {
+  const scrollPosition = window.innerHeight + window.scrollY;
+  const threshold = document.body.offsetHeight - 1000;
+  
+  if (scrollPosition >= threshold) {
+    loadMoreLetters();
+  }
+}
+
+// Set up infinite scroll
+window.addEventListener('scroll', checkScroll);
+window.addEventListener('resize', checkScroll);
+
+// Check on load in case the page is short
+document.addEventListener('DOMContentLoaded', checkScroll);
+</script>

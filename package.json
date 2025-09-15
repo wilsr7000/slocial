@@ -7,7 +7,7 @@
     "dev": "nodemon src/server.js",
     "start": "npm run migrate && node src/server.js",
     "start:prod": "node src/server.js",
-    "migrate": "node src/db/migrate-admin.js && node src/db/migrate-profile.js && node src/db/migrate-events.js && node src/db/migrate-oauth.js && node src/db/migrate-reading-status.js && node src/db/migrate-drafts.js && node src/db/migrate-tag-columns.js",
+    "migrate": "node src/db/migrate-admin.js && node src/db/migrate-profile.js && node src/db/migrate-events.js && node src/db/migrate-oauth.js && node src/db/migrate-reading-status.js && node src/db/migrate-drafts.js && node src/db/migrate-tag-columns.js && node src/db/migrate-reading-log.js",
     "setup-admin": "node src/db/setup-admin.js"
   },
   "keywords": [],

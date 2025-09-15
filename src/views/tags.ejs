@@ -452,7 +452,10 @@
           <div class="tag-actions">
             <% if (user) { %>
               <% if (tag.is_owner) { %>
-                <a href="/tags/<%= tag.id %>/manage" class="btn btn-warning" style="position: relative;">
+                <a href="/mosaics/<%= tag.slug %>/read" class="btn btn-primary">
+                  📖 Read
+                </a>
+                <a href="/tags/<%= tag.id %>/manage" class="btn btn-warning" style="position: relative; margin-left: 0.5rem;">
                   ⚙️ Manage
                   <% if (tag.pending_request_count > 0) { %>
                     <span style="position: absolute; top: -8px; right: -8px; background: #dc3545; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold;">
@@ -461,7 +464,10 @@
                   <% } %>
                 </a>
               <% } else if (tag.has_access) { %>
-                <span class="has-access">✅ You have access</span>
+                <a href="/mosaics/<%= tag.slug %>/read" class="btn btn-primary">
+                  📖 Read
+                </a>
+                <span class="has-access" style="margin-left: 0.5rem;">✅ Access granted</span>
               <% } else if (tag.request_status === 'pending') { %>
                 <span class="pending-request">⏳ Request pending</span>
                 <form action="/tags/<%= tag.id %>/cancel-request" method="POST" style="display: inline;">

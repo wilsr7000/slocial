@@ -121,6 +121,57 @@ function buildRouter(db) {
     return [];
   }
 
+  // Reading log helper function
+  function logReadingActivity(userId, letterId, action, additionalData = {}) {
+    if (!userId || !letterId) return;
+    
+    try {
+      // Get letter details for logging
+      const letter = db.prepare(`
+        SELECT l.*, u.handle as author_handle 
+        FROM letters l 
+        JOIN users u ON u.id = l.author_id 
+        WHERE l.id = ?
+      `).get(letterId);
+      
+      if (!letter) return;
+      
+      // Get letter tags
+      const tags = getLetterTags(letterId);
+      const tagNames = tags.map(t => t.name);
+      
+      // Calculate word count
+      const wordCount = letter.body ? letter.body.split(/\s+/).length : 0;
+      
+      // Insert log entry
+      db.prepare(`
+        INSERT INTO reading_log (
+          user_id, letter_id, action,
+          reading_time_seconds,
+          letter_title, letter_author_id, letter_author_handle,
+          letter_publish_date, letter_word_count, letter_tags,
+          referrer_type, referrer_id, device_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        userId,
+        letterId,
+        action,
+        additionalData.readingTime || null,
+        letter.title,
+        letter.author_id,
+        letter.author_handle,
+        letter.publish_at,
+        wordCount,
+        JSON.stringify(tagNames),
+        additionalData.referrerType || null,
+        additionalData.referrerId || null,
+        additionalData.deviceType || null
+      );
+    } catch (error) {
+      console.error('Error logging reading activity:', error);
+    }
+  }
+
   // Tag management helper functions
   function isTagOwner(userId, tagId) {
     if (!userId) return false;
@@ -1434,6 +1485,235 @@ function buildRouter(db) {
     }
   });
   
+  // API endpoint for mosaic infinite scroll
+  router.get('/mosaics/:slug/api/letters', (req, res) => {
+    const { slug } = req.params;
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = 10;
+    const offset = (page - 1) * pageSize;
+    const now = dayjs().toISOString();
+    const userId = req.session.user?.id || null;
+    
+    // Get the mosaic (tag) data
+    const mosaic = db.prepare('SELECT * FROM tags WHERE slug = ? AND is_active = 1').get(slug);
+    
+    if (!mosaic) {
+      return res.status(404).json({ error: 'Mosaic not found' });
+    }
+    
+    // Check if user has access to this mosaic
+    if (!canUserUseTag(userId, mosaic.id)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    // Check if is_draft and approval_status columns exist
+    let hasDraftColumn = false;
+    let hasApprovalColumn = false;
+    try {
+      const columns = db.prepare("PRAGMA table_info(letters)").all();
+      hasDraftColumn = columns.some(col => col.name === 'is_draft');
+      hasApprovalColumn = columns.some(col => col.name === 'approval_status');
+    } catch (e) {
+      console.error('Error checking for columns:', e);
+    }
+    
+    // Get letters from this specific mosaic
+    const query = hasApprovalColumn ? `
+      SELECT l.*, u.handle, u.bio, u.avatar_url, u.is_slocialite,
+        (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
+        EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
+        rs.status AS reading_status
+      FROM letters l
+      JOIN users u ON u.id = l.author_id
+      JOIN letter_tags lt ON lt.letter_id = l.id
+      LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
+      WHERE l.is_published = 1 ${hasDraftColumn ? 'AND l.is_draft = 0' : ''} 
+        AND l.publish_at <= @now
+        AND (l.approval_status = 'approved' OR l.approval_status IS NULL)
+        AND lt.tag_id = @tagId
+      ORDER BY l.publish_at DESC
+      LIMIT @limit OFFSET @offset
+    ` : hasDraftColumn ? `
+      SELECT l.*, u.handle, u.bio, u.avatar_url, u.is_slocialite,
+        (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
+        EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
+        rs.status AS reading_status
+      FROM letters l
+      JOIN users u ON u.id = l.author_id
+      JOIN letter_tags lt ON lt.letter_id = l.id
+      LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
+      WHERE l.is_published = 1 AND l.is_draft = 0 AND l.publish_at <= @now
+        AND lt.tag_id = @tagId
+      ORDER BY l.publish_at DESC
+      LIMIT @limit OFFSET @offset
+    ` : `
+      SELECT l.*, u.handle, u.bio, u.avatar_url, u.is_slocialite,
+        (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
+        EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
+        rs.status AS reading_status
+      FROM letters l
+      JOIN users u ON u.id = l.author_id
+      JOIN letter_tags lt ON lt.letter_id = l.id
+      LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
+      WHERE l.is_published = 1 AND l.publish_at <= @now
+        AND lt.tag_id = @tagId
+      ORDER BY l.publish_at DESC
+      LIMIT @limit OFFSET @offset
+    `;
+    
+    const params = { now, limit: pageSize + 1, offset, uid: userId || -1, tagId: mosaic.id };
+    const letters = db.prepare(query).all(params);
+    
+    // Check if there are more letters
+    const hasMore = letters.length > pageSize;
+    if (hasMore) {
+      letters.pop(); // Remove the extra letter used for checking
+    }
+    
+    // Add tags to each letter for display
+    letters.forEach(letter => {
+      letter.tags = getLetterTags(letter.id);
+    });
+    
+    res.json({ 
+      letters, 
+      hasMore,
+      page,
+      csrfToken: req.csrfToken()
+    });
+  });
+  
+  // Mosaic reading page - individual mosaic reading experience
+  router.get('/mosaics/:slug/read', (req, res) => {
+    const { slug } = req.params;
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = 10;
+    const offset = (page - 1) * pageSize;
+    const now = dayjs().toISOString();
+    const userId = req.session.user?.id || null;
+    
+    // Get the mosaic (tag) data
+    const mosaic = db.prepare('SELECT * FROM tags WHERE slug = ? AND is_active = 1').get(slug);
+    
+    if (!mosaic) {
+      return res.status(404).send('Mosaic not found');
+    }
+    
+    // Check if user has access to this mosaic
+    if (!canUserUseTag(userId, mosaic.id)) {
+      if (!userId) {
+        return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
+      }
+      return res.status(403).render('error', {
+        user: req.session.user,
+        message: 'You need access to this mosaic to read its letters.',
+        actionLink: '/tags',
+        actionText: 'Request Access'
+      });
+    }
+    
+    // Check if is_draft and approval_status columns exist
+    let hasDraftColumn = false;
+    let hasApprovalColumn = false;
+    try {
+      const columns = db.prepare("PRAGMA table_info(letters)").all();
+      hasDraftColumn = columns.some(col => col.name === 'is_draft');
+      hasApprovalColumn = columns.some(col => col.name === 'approval_status');
+    } catch (e) {
+      console.error('Error checking for columns:', e);
+    }
+    
+    // Get letters from this specific mosaic
+    const query = hasApprovalColumn ? `
+      SELECT l.*, u.handle, u.bio, u.avatar_url, u.is_slocialite,
+        (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
+        EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
+        rs.status AS reading_status
+      FROM letters l
+      JOIN users u ON u.id = l.author_id
+      JOIN letter_tags lt ON lt.letter_id = l.id
+      LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
+      WHERE l.is_published = 1 ${hasDraftColumn ? 'AND l.is_draft = 0' : ''} 
+        AND l.publish_at <= @now
+        AND (l.approval_status = 'approved' OR l.approval_status IS NULL)
+        AND lt.tag_id = @tagId
+      ORDER BY l.publish_at DESC
+      LIMIT @limit OFFSET @offset
+    ` : hasDraftColumn ? `
+      SELECT l.*, u.handle, u.bio, u.avatar_url, u.is_slocialite,
+        (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
+        EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
+        rs.status AS reading_status
+      FROM letters l
+      JOIN users u ON u.id = l.author_id
+      JOIN letter_tags lt ON lt.letter_id = l.id
+      LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
+      WHERE l.is_published = 1 AND l.is_draft = 0 AND l.publish_at <= @now
+        AND lt.tag_id = @tagId
+      ORDER BY l.publish_at DESC
+      LIMIT @limit OFFSET @offset
+    ` : `
+      SELECT l.*, u.handle, u.bio, u.avatar_url, u.is_slocialite,
+        (SELECT COUNT(1) FROM resonates r WHERE r.letter_id = l.id) AS resonate_count,
+        EXISTS(SELECT 1 FROM resonates r WHERE r.letter_id = l.id AND r.user_id = @uid) AS did_resonate,
+        rs.status AS reading_status
+      FROM letters l
+      JOIN users u ON u.id = l.author_id
+      JOIN letter_tags lt ON lt.letter_id = l.id
+      LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = @uid
+      WHERE l.is_published = 1 AND l.publish_at <= @now
+        AND lt.tag_id = @tagId
+      ORDER BY l.publish_at DESC
+      LIMIT @limit OFFSET @offset
+    `;
+    
+    const params = { now, limit: pageSize, offset, uid: userId || -1, tagId: mosaic.id };
+    const letters = db.prepare(query).all(params);
+    
+    // Add tags to each letter for display
+    letters.forEach(letter => {
+      letter.tags = getLetterTags(letter.id);
+    });
+    
+    // Get total count for this mosaic
+    const countQuery = `
+      SELECT COUNT(DISTINCT l.id) as total 
+      FROM letters l
+      JOIN letter_tags lt ON lt.letter_id = l.id
+      WHERE l.is_published = 1 
+        ${hasDraftColumn ? 'AND l.is_draft = 0' : ''}
+        AND l.publish_at <= ?
+        AND lt.tag_id = ?
+    `;
+    const totalCount = db.prepare(countQuery).get(now, mosaic.id).total;
+    
+    // Get count of unread letters in this mosaic
+    const unreadQuery = userId ? `
+      SELECT COUNT(DISTINCT l.id) as unread
+      FROM letters l
+      JOIN letter_tags lt ON lt.letter_id = l.id
+      LEFT JOIN reading_status rs ON rs.letter_id = l.id AND rs.user_id = ?
+      WHERE l.is_published = 1 
+        ${hasDraftColumn ? 'AND l.is_draft = 0' : ''}
+        AND l.publish_at <= ?
+        AND lt.tag_id = ?
+        AND (rs.status IS NULL OR rs.status = 'later')
+    ` : null;
+    
+    const unreadCount = unreadQuery ? db.prepare(unreadQuery).get(userId, now, mosaic.id).unread : 0;
+    
+    res.render('mosaic-read', { 
+      user: req.session.user, 
+      letters, 
+      page,
+      mosaic,
+      totalCount,
+      unreadCount,
+      pageClass: 'mosaic-read',
+      pageTitle: `${mosaic.name} - Mosaic Reading`
+    });
+  });
+  
   // Tag management page (for owners)
   router.get('/tags/:id/manage', requireAuth, (req, res) => {
     const tagId = req.params.id;
@@ -1961,10 +2241,33 @@ function buildRouter(db) {
     const id = Number(req.params.id);
     const userId = req.session.user?.id || null;
     const uid = userId || -1; // Keep for backward compatibility
+    const referrer = req.query.ref || req.headers.referer || 'direct';
     
     // First check if user has permission to view this letter based on tags
     if (!canUserViewLetter(userId, id)) {
       return res.status(403).send('You do not have permission to view this letter');
+    }
+    
+    // Log the view action if user is logged in
+    if (userId) {
+      let referrerType = 'direct';
+      let referrerId = null;
+      
+      if (referrer.includes('/mosaics/')) {
+        referrerType = 'mosaic';
+        const match = referrer.match(/\/mosaics\/([^\/]+)/);
+        if (match) referrerId = match[1];
+      } else if (referrer === '/' || referrer.includes('/?')) {
+        referrerType = 'home';
+      } else if (referrer.includes('/profile')) {
+        referrerType = 'profile';
+      }
+      
+      logReadingActivity(userId, id, 'view', {
+        referrerType,
+        referrerId,
+        deviceType: req.headers['user-agent']?.includes('Mobile') ? 'mobile' : 'desktop'
+      });
     }
     
     // Check if is_draft column exists
@@ -2072,7 +2375,7 @@ function buildRouter(db) {
   });
   router.post('/letters/:id/status', requireAuth, (req, res) => {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, readingTime, referrer, referrerType } = req.body;
     const userId = req.session.user.id;
     
     try {
@@ -2080,6 +2383,12 @@ function buildRouter(db) {
         // Remove the reading status
         db.prepare('DELETE FROM reading_status WHERE user_id = ? AND letter_id = ?')
           .run(userId, id);
+        
+        // Log the action
+        logReadingActivity(userId, id, 'remove_later', {
+          referrerType: referrerType || 'unknown',
+          referrerId: referrer || null
+        });
       } else if (['read', 'skip', 'later', 'reading'].includes(status)) {
         // Update or insert reading status
         const now = dayjs().toISOString();
@@ -2089,6 +2398,14 @@ function buildRouter(db) {
           ON CONFLICT(user_id, letter_id) 
           DO UPDATE SET status = ?, updated_at = ?
         `).run(userId, id, status, now, now, status, now);
+        
+        // Log the reading activity
+        logReadingActivity(userId, id, status, {
+          readingTime: readingTime || null,
+          referrerType: referrerType || 'unknown',
+          referrerId: referrer || null,
+          deviceType: req.headers['user-agent']?.includes('Mobile') ? 'mobile' : 'desktop'
+        });
         
         // Track event
         eventTracker.track('reading_status', {
