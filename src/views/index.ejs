@@ -1,13 +1,10 @@
+<% if (!user) { %>
 <section class="hero">
   <h1>Slow letters, lasting resonance</h1>
   <p>Write slow, read slow. Letters steep for 12 hours. No rush, no noise.</p>
   <div class="hero-ctas">
-    <% if (user) { %>
-      <a class="btn btn-primary" href="/compose">Compose a letter</a>
-    <% } else { %>
-      <a class="btn btn-primary" href="/signup">Create account</a>
-      <a class="btn btn-ghost" href="/login">Sign in</a>
-    <% } %>
+    <a class="btn btn-primary" href="/signup">Create account</a>
+    <a class="btn btn-ghost" href="/login">Sign in</a>
   </div>
 </section>
 
@@ -29,6 +26,10 @@
     <p>One response per reader per letter keeps threads calm.</p>
   </div>
 </section>
+<% } else { %>
+<!-- Clean reading focus for logged-in users -->
+<div style="padding-top: 24px;"></div>
+<% } %>
 
 <section class="feed">
   <h2 class="section-title">
