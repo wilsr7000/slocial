@@ -1116,12 +1116,13 @@ function buildRouter(db) {
       return res.status(404).send('Draft not found');
     }
     
-    // Check 24-hour limit
+    // Check 24-hour limit (honor system - just log for now)
     const lastPublished = db.prepare('SELECT created_at FROM letters WHERE author_id = ? ORDER BY created_at DESC LIMIT 1')
       .get(req.session.user.id);
     
     if (lastPublished && dayjs(lastPublished.created_at).isAfter(now.subtract(24, 'hour'))) {
-      return res.status(429).send('You can only publish one letter per 24 hours. Please wait before publishing.');
+      // Just log it - honor system
+      console.log(`User ${req.session.user.id} publishing within 24 hours (honor system)`);
     }
     
     // Convert draft to published letter
@@ -1799,11 +1800,26 @@ function buildRouter(db) {
         }
       } else {
         // Publish (queue for publishing)
-        // Enforce 1 letter per 24h (temporarily disabled draft check until migration completes)
+        // Check if they published recently (honor system reminder)
         const last = db.prepare('SELECT created_at FROM letters WHERE author_id = ? ORDER BY created_at DESC LIMIT 1')
           .get(req.session.user.id);
-        if (last && dayjs(last.created_at).isAfter(dayjs().subtract(24, 'hour'))) {
-          return res.status(429).render('compose', { user: req.session.user, errors: [{ msg: 'You can only publish once every 24 hours.' }], values: req.body, pageClass: 'compose' });
+        
+        // If they published recently and haven't confirmed, show reminder
+        if (last && dayjs(last.created_at).isAfter(dayjs().subtract(24, 'hour')) && action !== 'publish-confirmed') {
+          const hoursAgo = Math.round(dayjs().diff(dayjs(last.created_at), 'hour', true));
+          const timeLeft = 24 - hoursAgo;
+          
+          return res.render('compose', { 
+            user: req.session.user, 
+            errors: [], 
+            values: req.body, 
+            pageClass: 'compose',
+            showReminderModal: true,
+            lastPublished: {
+              hoursAgo: hoursAgo,
+              timeLeft: timeLeft
+            }
+          });
         }
 
         try {

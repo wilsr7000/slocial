@@ -793,6 +793,48 @@
     <div class="preview-content" id="preview-content"></div>
   </div>
   
+  <!-- 24-hour reminder modal -->
+  <% if (typeof showReminderModal !== 'undefined' && showReminderModal) { %>
+  <div id="reminder-modal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:3000; display:flex; align-items:center; justify-content:center;">
+    <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 32px; max-width: 450px; margin: 20px; text-align: center;">
+      <h2 style="margin: 0 0 16px 0; font-size: 24px;">🕐 Gentle Reminder</h2>
+      <p style="color: var(--fg); line-height: 1.6; margin-bottom: 20px;">
+        You published a letter <strong><%= lastPublished.hoursAgo %> hour<%= lastPublished.hoursAgo !== 1 ? 's' : '' %> ago</strong>.
+      </p>
+      <p style="color: var(--muted); line-height: 1.6; margin-bottom: 24px;">
+        Slocial encourages one letter per day to maintain quality over quantity. 
+        You can wait <strong><%= lastPublished.timeLeft %> more hour<%= lastPublished.timeLeft !== 1 ? 's' : '' %></strong>, 
+        or proceed now on the honor system.
+      </p>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button onclick="closeReminderModal()" style="padding: 10px 24px; background: var(--card); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; cursor: pointer;">
+          I'll wait
+        </button>
+        <button onclick="publishConfirmed()" style="padding: 10px 24px; background: var(--fg); color: var(--bg); border: none; border-radius: 6px; cursor: pointer;">
+          Publish anyway
+        </button>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Show modal on page load if needed
+    document.addEventListener('DOMContentLoaded', function() {
+      // If form was populated with values, restore them
+      <% if (typeof values !== 'undefined' && values.tags) { %>
+        try {
+          const tagsData = '<%= values.tags %>'.replace(/&#34;/g, '"');
+          const tags = JSON.parse(tagsData);
+          tags.forEach(tag => {
+            addTag(tag);
+          });
+        } catch(e) {
+          console.error('Could not restore tags:', e);
+        }
+      <% } %>
+    });
+  </script>
+  <% } %>
+
   <!-- Image modal - minimal version with upload -->
   <div id="image-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center;">
     <div style="background:var(--card); border-radius:8px; padding:30px; max-width:450px; width:90%; box-shadow: 0 4px 20px var(--shadow-heavy); border: 1px solid var(--border);">
@@ -1493,4 +1535,24 @@
     // Form will submit normally
     return true;
   });
+  
+  // Functions for 24-hour reminder modal
+  function closeReminderModal() {
+    const modal = document.getElementById('reminder-modal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+  }
+  
+  function publishConfirmed() {
+    // Add hidden input to indicate user confirmed
+    const confirmedInput = document.createElement('input');
+    confirmedInput.type = 'hidden';
+    confirmedInput.name = 'action';
+    confirmedInput.value = 'publish-confirmed';
+    document.getElementById('compose-form').appendChild(confirmedInput);
+    
+    // Submit the form
+    document.getElementById('compose-form').submit();
+  }
 </script>
