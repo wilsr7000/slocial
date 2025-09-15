@@ -1226,7 +1226,7 @@ function buildRouter(db) {
       message: req.query.message,
       error: req.query.error,
       csrfToken: req.csrfToken(),
-      pageTitle: 'Slocial - Explore Ideas'
+      pageTitle: 'Slocial - Mosaics'
     });
   });
   
