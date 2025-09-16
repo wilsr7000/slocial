@@ -587,23 +587,23 @@
   
   function updateImageThumbnails() {
     const container = document.getElementById('image-thumbnails');
-    const noImages = document.getElementById('no-images');
+    
+    // Clear container
+    container.innerHTML = '';
     
     if (Object.keys(uploadedImages).length === 0) {
-      noImages.style.display = 'block';
+      container.innerHTML = '<div class="no-images" id="no-images">No images uploaded yet</div>';
       return;
     }
     
-    noImages.style.display = 'none';
-    container.innerHTML = '';
-    
+    // Add thumbnails
     for (const [id, image] of Object.entries(uploadedImages)) {
       const thumb = document.createElement('div');
       thumb.className = 'image-thumbnail';
       thumb.innerHTML = `
-        <img src="${image.data}" alt="${image.name}" onclick="insertImageReference('${id}', '${image.name}')">
+        <img src="${image.data}" alt="${image.name}" title="Click to insert reference" onclick="insertImageReference('${id}', '${image.name}')">
         <div class="image-thumbnail-name">${image.name}</div>
-        <button class="image-remove" onclick="removeImage('${id}')">&times;</button>
+        <button class="image-remove" onclick="removeImage('${id}')" title="Remove image">&times;</button>
       `;
       container.appendChild(thumb);
     }
@@ -686,12 +686,51 @@
     tagsInput.value = JSON.stringify(selectedTags);
   });
   
+  // Function to extract base64 images from content and replace with placeholders
+  function extractImagesFromContent() {
+    let content = bodyInput.value;
+    const imgRegex = /!\[([^\]]*)\]\((data:image\/[^;]+;base64,[^)]+)\)/g;
+    let matches = [];
+    let match;
+    
+    // First, collect all matches
+    while ((match = imgRegex.exec(content)) !== null) {
+      matches.push({
+        fullMatch: match[0],
+        altText: match[1],
+        dataUrl: match[2]
+      });
+    }
+    
+    // Then process them (replacing from end to start to maintain positions)
+    if (matches.length > 0) {
+      matches.reverse().forEach(match => {
+        imageCounter++;
+        const imageId = `img-${imageCounter}`;
+        
+        // Store the image
+        uploadedImages[imageId] = {
+          data: match.dataUrl,
+          name: match.altText || `image-${imageCounter}`
+        };
+        
+        // Replace in content with placeholder
+        content = content.replace(match.fullMatch, `![${match.altText}]({{${imageId}}})`);
+      });
+      
+      bodyInput.value = content;
+      updateImageThumbnails();
+      imagesInput.value = JSON.stringify(uploadedImages);
+      updateWordCount();
+    }
+  }
+  
   // Initialize with draft data if available
   <% if (typeof draft !== 'undefined' && draft) { %>
     // Restore draft images if any
     try {
       const draftImages = '<%= draft.images || '{}' %>';
-      if (draftImages) {
+      if (draftImages && draftImages !== '{}') {
         uploadedImages = JSON.parse(draftImages);
         updateImageThumbnails();
       }
@@ -699,4 +738,10 @@
       console.error('Could not restore images:', e);
     }
   <% } %>
+  
+  // Extract any base64 images from the content on load
+  // Run after a short delay to ensure DOM is ready
+  setTimeout(() => {
+    extractImagesFromContent();
+  }, 100);
 </script>
