@@ -2203,7 +2203,7 @@ function buildRouter(db) {
   );
   router.post('/compose', requireAuth,
     body('title').isLength({ min: 1, max: 120 }),
-    body('body').isLength({ min: 1, max: 500000 }), // Increased to allow multiple images
+    body('body').isLength({ min: 1, max: 5000000 }), // Increased to 5MB to allow multiple images
     (req, res) => {
       console.log('POST /compose - Request received');
       console.log('Body size:', JSON.stringify(req.body).length, 'bytes');
