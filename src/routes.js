@@ -636,7 +636,7 @@ function buildRouter(db) {
   function renderMarkdown(text) {
     const html = marked.parse(text);
     // Allow images with both regular URLs and data URLs
-    return DOMPurify.sanitize(html, {
+    const clean = DOMPurify.sanitize(html, {
       ADD_DATA_URI_TAGS: ['img'],  // Allow data URLs for images
       ADD_ATTR: ['target'],         // Allow target attribute for links
       ALLOWED_TAGS: [               // Explicitly allow common HTML tags
@@ -655,8 +655,18 @@ function buildRouter(db) {
         'width', 'height',
         'class', 'id',
         'rel'
-      ]
+      ],
+      ALLOW_DATA_ATTR: false,
+      ALLOW_UNKNOWN_PROTOCOLS: false,
+      ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|xxx|data):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
     });
+    
+    // Debug: log if images were stripped
+    if (text.includes('![') && !clean.includes('<img')) {
+      console.log('Warning: Images may have been stripped from markdown');
+    }
+    
+    return clean;
   }
 
   router.get('/', (req, res) => {

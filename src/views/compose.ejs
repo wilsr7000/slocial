@@ -606,6 +606,8 @@
     // Replace image placeholders before submission
     let finalBody = bodyInput.value;
     for (const [id, image] of Object.entries(uploadedImages)) {
+      // Replace {{img-1}} with the actual data URL
+      // The markdown syntax ![alt]({{img-1}}) becomes ![alt](data:image/...)
       const pattern = new RegExp(`\\{\\{${id}\\}\\}`, 'g');
       finalBody = finalBody.replace(pattern, image.data);
     }
