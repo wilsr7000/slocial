@@ -130,6 +130,22 @@
     font-size: 20px;
   }
 
+  /* Hero Image */
+  .letter-hero-image {
+    margin: 32px -20px;
+    text-align: center;
+  }
+
+  .letter-hero-image img {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: 500px;
+    object-fit: cover;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  }
+
   /* Images - Elegant Display */
   .letter-content img {
     max-width: 100%;
@@ -400,9 +416,22 @@
     .action-btn {
       width: 100%;
     }
+
+    .letter-hero-image {
+      margin: 24px -16px;
+    }
+
+    .letter-hero-image img {
+      border-radius: 0;
+      max-height: 400px;
+    }
   }
 
   /* Dark Mode Adjustments */
+  [data-theme="dark"] .letter-hero-image img {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  }
+
   [data-theme="dark"] .letter-content img {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   }
@@ -459,9 +488,31 @@
     </div>
   </div>
 
+  <!-- Extract and display hero image if present -->
+  <%
+    // Extract first image from the HTML content
+    let heroImage = null;
+    let contentWithoutHero = letter.body_html;
+    
+    // Match img tags in the HTML
+    const imgMatch = letter.body_html.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/);
+    if (imgMatch) {
+      heroImage = imgMatch[1];
+      // Remove the first image from the content
+      contentWithoutHero = letter.body_html.replace(imgMatch[0], '');
+    }
+  %>
+  
+  <% if (heroImage) { %>
+  <!-- Hero Image -->
+  <figure class="letter-hero-image">
+    <img src="<%= heroImage %>" alt="Letter image" />
+  </figure>
+  <% } %>
+
   <!-- Letter Content -->
   <article class="letter-content">
-    <%- letter.body_html %>
+    <%- contentWithoutHero %>
   </article>
 
   <!-- Actions -->
