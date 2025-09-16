@@ -396,9 +396,6 @@
 
       <!-- Form actions -->
       <div class="form-actions">
-        <button type="button" onclick="showPreview()" class="btn btn-secondary">
-          Preview
-        </button>
         <button type="submit" name="action" value="draft" class="btn btn-secondary">
           Save as Draft
         </button>
@@ -590,10 +587,9 @@
       body = body.replace(pattern, image.data);
     }
     
-    // For now, just show the raw markdown
-    // TODO: Add marked.js for markdown parsing
-    const html = `<h1>${title}</h1><pre>${body}</pre>`;
-    document.getElementById('preview-content').innerHTML = html;
+    // Convert markdown to HTML
+    const html = `<h1>${title}</h1>${marked.parse(body)}`;
+    document.getElementById('preview-content').innerHTML = DOMPurify.sanitize(html);
     document.getElementById('preview-modal').classList.add('active');
   }
   
